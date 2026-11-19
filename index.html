@@ -1042,6 +1042,29 @@
         </div>
     </div>
 
+    <!-- 6. 修改個人帳本暱稱 Modal -->
+      <div id="editNicknameModal" class="modal-backdrop">
+        <div class="modal-sheet">
+          <div class="modal-header">
+            <h3>修改我在本帳本的暱稱</h3>
+            <button class="close-btn" onclick="closeModal('editNicknameModal')"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <p style="font-size:13px; color:var(--text-sub); margin-top:0; line-height:1.5;">
+            此暱稱僅會套用在「<b id="nicknameModalLedgerName"></b>」中，方便朋友在分帳與結算時辨識，不會影響你的 LINE 帳號設定。
+          </p>
+          <div class="form-group">
+            <label class="form-label">顯示暱稱（最多 15 字）</label>
+            <input type="text" id="editNicknameInput" class="form-control" placeholder="例如：王小明、阿明" maxlength="15" />
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary" style="flex:1;" onclick="closeModal('editNicknameModal')">取消</button>
+            <button type="button" class="btn-primary" style="flex:1;" onclick="submitUpdateNickname()">
+              <i class="fa-solid fa-check"></i> 儲存暱稱
+            </button>
+          </div>
+        </div>
+      </div>
+
     <script>
         const LIFF_ID = "2012687270-krKUpomw";
         const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyK9l3YGWPuKE9uGLM2TlxwQy0C1nQxQCii79esd2uYFvyt5imgzenyLKWiBaws_HAw/exec";
@@ -1049,45 +1072,71 @@
         let currentUser = null;
         let appState = null;
         let currentTab = 'expenses';
-
+        let isMockMode = false;
+        
         // =========================================================================
         (async function initLiffApp() {
-            try {
-                await liff.init({ liffId: LIFF_ID });
-                if (!liff.isLoggedIn()) {
-                    liff.login();
-                    return;
-                }
-
-                const profile = await liff.getProfile();
-                currentUser = {
-                    userId: profile.userId,
-                    displayName: profile.displayName
-                };
-
-                // 同時解析網址 ?invite= 參數與 LIFF 跳轉的 liff.state 參數
-                const urlParams = new URLSearchParams(window.location.search);
-                let inviteCode = urlParams.get('invite');
-                if (!inviteCode && urlParams.get('liff.state')) {
-                    const stateParams = new URLSearchParams(urlParams.get('liff.state'));
-                    inviteCode = stateParams.get('invite');
-                }
-
-                if (inviteCode && window.history && window.history.replaceState) {
-                    window.history.replaceState({}, document.title, window.location.pathname);
-                }
-
-                document.getElementById('topControlBar').classList.remove('hidden');
-                await callGasApi('bootstrap', {
-                    userProfile: currentUser,
-                    inviteCode: inviteCode || ''
-                }, '正在載入帳本資料...');
-            } catch (err) {
-                document.getElementById('loadingText').innerHTML =
-                    '<div style="padding:0 24px; text-align:center; color:#d64545; line-height:1.6;">' +
-                    '初始化失敗：' + escapeHtml(err.message || String(err)) +
-                    '</div>';
+          try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const mockUserId = urlParams.get('mock_user');
+            const mockUserName = urlParams.get('mock_name') || '測試成員';
+    
+            // 取得邀請碼（支援 ?invite= 或 liff.state）
+            let inviteCode = urlParams.get('invite');
+            if (!inviteCode && urlParams.get('liff.state')) {
+              const stateParams = new URLSearchParams(urlParams.get('liff.state'));
+              inviteCode = stateParams.get('invite');
             }
+    
+            if (mockUserId) {
+              isMockMode = true;
+              currentUser = {
+                userId: mockUserId,
+                displayName: mockUserName
+              };
+    
+              // 在頁面頂部顯示模擬身分提示條，避免混淆目前分頁是哪位角色
+              const banner = document.createElement('div');
+              banner.style.cssText = 'background:#3d2c27; color:#fcecef; font-size:12px; text-align:center; padding:6px; font-weight:700;';
+              banner.textContent = '🧪 模擬測試模式｜目前角色：' + mockUserName + ' (' + mockUserId + ')';
+              document.body.insertBefore(banner, document.body.firstChild);
+    
+              document.getElementById('topControlBar').classList.remove('hidden');
+              await callGasApi('bootstrap', {
+                userProfile: currentUser,
+                inviteCode: inviteCode || ''
+              }, '正在載入模擬帳號資料...');
+              return;
+            }
+    
+            // 【正式模式】正常執行 LINE LIFF 驗證
+            await liff.init({ liffId: LIFF_ID });
+            if (!liff.isLoggedIn()) {
+              liff.login();
+              return;
+            }
+    
+            const profile = await liff.getProfile();
+            currentUser = {
+              userId: profile.userId,
+              displayName: profile.displayName
+            };
+    
+            if (inviteCode && window.history && window.history.replaceState) {
+              window.history.replaceState({}, document.title, window.location.pathname);
+            }
+    
+            document.getElementById('topControlBar').classList.remove('hidden');
+            await callGasApi('bootstrap', {
+              userProfile: currentUser,
+              inviteCode: inviteCode || ''
+            }, '正在載入帳本資料...');
+          } catch (err) {
+            document.getElementById('loadingText').innerHTML =
+              '<div style="padding:0 24px; text-align:center; color:#d64545; line-height:1.6;">' +
+              '初始化失敗：' + escapeHtml(err.message || String(err)) +
+              '</div>';
+          }
         })();
 
         // =========================================================================
@@ -1156,8 +1205,10 @@
             const personal = data.personal;
 
             document.getElementById('ledgerTitle').textContent = ledger.title;
-            document.getElementById('ledgerMeta').textContent =
-                '成員 ' + data.members.length + ' 人・建立者：' + ledger.creatorName;
+            document.getElementById('ledgerMeta').innerHTML =
+            '成員 ' + data.members.length + ' 人・我的暱稱：<b>' + escapeHtml(personal.nickname) + '</b>' +
+            '<button type="button" class="edit-link" style="margin-top:0; margin-left:6px; padding:2px 7px;" onclick="openNicknameModal()">' +
+            '<i class="fa-solid fa-pen"></i> 改名</button>';
 
             const badge = document.getElementById('ledgerStatusBadge');
             if (perm.isSettled) {
@@ -1500,17 +1551,24 @@
         }
 
         function openShareModal() {
-            const ledger = appState.activeLedgerData.ledger;
-            document.getElementById('modalInviteCodeBadge').textContent = ledger.invite_code;
+          const ledger = appState.activeLedgerData.ledger;
+          document.getElementById('modalInviteCodeBadge').textContent = ledger.invite_code;
+    
+          if (isMockMode) {
+            const baseUrl = window.location.origin + window.location.pathname;
+            document.getElementById('shareUrlInput').value =
+              baseUrl + '?mock_user=TEST_U02&mock_name=旅伴小華&invite=' + ledger.invite_code;
+          } else {
             document.getElementById('shareUrlInput').value = ledger.invite_url;
-
-            const lineShareBtn = document.getElementById('btnLineShare');
-            if (liff.isApiAvailable && liff.isApiAvailable('shareTargetPicker')) {
-                lineShareBtn.classList.remove('hidden');
-            } else {
-                lineShareBtn.classList.add('hidden');
-            }
-            openModal('shareInviteModal');
+          }
+    
+          const lineShareBtn = document.getElementById('btnLineShare');
+          if (!isMockMode && liff.isApiAvailable && liff.isApiAvailable('shareTargetPicker')) {
+            lineShareBtn.classList.remove('hidden');
+          } else {
+            lineShareBtn.classList.add('hidden');
+          }
+          openModal('shareInviteModal');
         }
 
         async function copyInviteUrl() {
@@ -1594,6 +1652,32 @@
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#39;');
+        }
+
+        function openNicknameModal() {
+          const data = appState && appState.activeLedgerData;
+          if (!data) return;
+          document.getElementById('nicknameModalLedgerName').textContent = data.ledger.title;
+          document.getElementById('editNicknameInput').value = data.personal.nickname || '';
+          openModal('editNicknameModal');
+        }
+    
+        function submitUpdateNickname() {
+          const newName = document.getElementById('editNicknameInput').value.trim();
+          if (!newName) {
+            showToast('請輸入要顯示的暱稱');
+            return;
+          }
+          if (newName === appState.activeLedgerData.personal.nickname) {
+            closeModal('editNicknameModal');
+            return;
+          }
+          closeModal('editNicknameModal');
+          callGasApi('updateNickname', {
+            userId: currentUser.userId,
+            ledgerId: appState.activeLedgerId,
+            nickname: newName
+          }, '正在更新暱稱...');
         }
     </script>
 </body>
