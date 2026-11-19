@@ -1068,6 +1068,7 @@
     <script>
         const LIFF_ID = "2012687270-krKUpomw";
         const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyK9l3YGWPuKE9uGLM2TlxwQy0C1nQxQCii79esd2uYFvyt5imgzenyLKWiBaws_HAw/exec";
+        const ENABLE_MOCK_MODE = false;
 
         let currentUser = null;
         let appState = null;
@@ -1088,7 +1089,7 @@
               inviteCode = stateParams.get('invite');
             }
     
-            if (mockUserId) {
+            if (ENABLE_MOCK_MODE && mockUserId) {
               isMockMode = true;
               currentUser = {
                 userId: mockUserId,
