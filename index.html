@@ -530,7 +530,6 @@
       gap: 6px;
     }
 
-    /* 認領代管成員選項卡片 */
     .claim-option-btn {
       width: 100%;
       text-align: left;
@@ -1088,7 +1087,7 @@
     </div>
   </div>
 
-  <!-- 6. 修改成員暱稱 Modal（支援改自己，或創建者協助改所有成員） -->
+  <!-- 6. 修改成員暱稱 Modal -->
   <div id="editNicknameModal" class="modal-backdrop">
     <div class="modal-sheet">
       <div class="modal-header">
@@ -1112,7 +1111,7 @@
     </div>
   </div>
 
-  <!-- 7. 編輯帳本名稱 Modal（僅創建者可用） -->
+  <!-- 7. 編輯帳本名稱 Modal -->
   <div id="renameLedgerModal" class="modal-backdrop">
     <div class="modal-sheet">
       <div class="modal-header">
@@ -1132,7 +1131,7 @@
     </div>
   </div>
 
-  <!-- 8. 新增虛擬代管成員 Modal（僅創建者可用） -->
+  <!-- 8. 新增虛擬代管成員 Modal -->
   <div id="addGuestModal" class="modal-backdrop">
     <div class="modal-sheet">
       <div class="modal-header">
@@ -1155,7 +1154,7 @@
     </div>
   </div>
 
-  <!-- 9. 確認移除成員 Modal（僅創建者可用） -->
+  <!-- 9. 確認移除成員 Modal -->
   <div id="removeMemberModal" class="modal-backdrop">
     <div class="modal-sheet">
       <div class="modal-header">
@@ -1174,7 +1173,7 @@
     </div>
   </div>
 
-  <!-- 10. 受邀加入選擇 Modal（第一段：說明與選擇新成員或認領代管名單） -->
+  <!-- 10. 受邀加入選擇 Modal（第一段） -->
   <div id="claimGuestStep1Modal" class="modal-backdrop">
     <div class="modal-sheet">
       <div class="modal-header">
@@ -1206,7 +1205,7 @@
     </div>
   </div>
 
-  <!-- 11. 受邀認領二次確認警告 Modal（第二段：防誤點確認） -->
+  <!-- 11. 受邀認領二次確認警告 Modal（第二段） -->
   <div id="claimGuestStep2Modal" class="modal-backdrop">
     <div class="modal-sheet">
       <div class="modal-header">
@@ -1231,6 +1230,9 @@
   </div>
 
   <script>
+    // =========================================================================
+    // 請填入你的 LINE LIFF ID 與 GAS 部署網址 (/exec 結尾)
+    // =========================================================================
     const LIFF_ID = "2012687270-krKUpomw";
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyK9l3YGWPuKE9uGLM2TlxwQy0C1nQxQCii79esd2uYFvyt5imgzenyLKWiBaws_HAw/exec";
 
@@ -1242,19 +1244,44 @@
     let currentTab = 'expenses';
     let pendingInviteChoiceData = null;
     let selectedClaimGuest = null;
+    let pendingPrefillDraft = null;
+
+    function getCombinedSearchParams() {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('liff.state')) {
+        const stateStr = urlParams.get('liff.state');
+        const cleanState = stateStr.indexOf('?') === 0 ? stateStr.slice(1) : stateStr;
+        const stateParams = new URLSearchParams(cleanState);
+        stateParams.forEach((val, key) => {
+          if (!urlParams.has(key)) urlParams.set(key, val);
+        });
+      }
+      return urlParams;
+    }
 
     function extractInviteCodeFromUrl() {
-      const urlParams = new URLSearchParams(window.location.search);
-      let code = urlParams.get('invite');
-      if (!code && urlParams.get('liff.state')) {
-        const stateParams = new URLSearchParams(urlParams.get('liff.state'));
-        code = stateParams.get('invite');
-      }
+      const params = getCombinedSearchParams();
+      const code = params.get('invite');
       return code ? code.trim().toUpperCase() : '';
     }
 
+    function extractPrefillFromUrl() {
+      const params = getCombinedSearchParams();
+      const item = params.get('prefill_item');
+      const amt = params.get('prefill_amt');
+      if (!item || !amt) return null;
+
+      return {
+        ledgerId: params.get('prefill_ledger') || '',
+        itemName: item,
+        amount: Number(amt),
+        payerId: params.get('prefill_payer') || '',
+        splitUsers: params.get('prefill_splits') ? params.get('prefill_splits').split(',').filter(Boolean) : []
+      };
+    }
+
     // =========================================================================
-    // 1. 初始化（優先判斷模擬模式，正式模式則跨 OAuth 保留邀請碼）
+    // 1. 初始化（支援模擬模式、跨 OAuth 保留邀請碼與聊天室草稿帶入參數）
     // =========================================================================
     (async function initLiffApp() {
       try {
@@ -1262,6 +1289,7 @@
         const mockUserId = urlParams.get('mock_user');
         const mockUserName = urlParams.get('mock_name') || '測試成員';
         const incomingInvite = extractInviteCodeFromUrl();
+        const incomingPrefill = extractPrefillFromUrl();
 
         // 【分支 A：模擬測試模式】
         if (ENABLE_MOCK_MODE && mockUserId) {
@@ -1270,14 +1298,17 @@
             userId: mockUserId,
             displayName: mockUserName
           };
+          if (incomingPrefill) {
+            pendingPrefillDraft = incomingPrefill;
+          }
 
           const banner = document.createElement('div');
           banner.style.cssText = 'background:#3d2c27; color:#fcecef; font-size:12px; text-align:center; padding:6px; font-weight:700;';
           banner.textContent = '🧪 模擬測試模式｜目前角色：' + mockUserName + ' (' + mockUserId + ')';
           document.body.insertBefore(banner, document.body.firstChild);
 
-          if (incomingInvite && window.history && window.history.replaceState) {
-            urlParams.delete('invite');
+          if ((incomingInvite || incomingPrefill) && window.history && window.history.replaceState) {
+            ['invite', 'prefill_ledger', 'prefill_item', 'prefill_amt', 'prefill_payer', 'prefill_splits'].forEach(k => urlParams.delete(k));
             const remainQuery = urlParams.toString();
             const cleanMockUrl = window.location.pathname + (remainQuery ? '?' + remainQuery : '');
             window.history.replaceState({}, document.title, cleanMockUrl);
@@ -1295,12 +1326,19 @@
         if (incomingInvite) {
           localStorage.setItem('pending_invite_code', incomingInvite);
         }
+        if (incomingPrefill) {
+          localStorage.setItem('pending_prefill_draft', JSON.stringify(incomingPrefill));
+        }
 
         await liff.init({ liffId: LIFF_ID });
 
         const postInitInvite = extractInviteCodeFromUrl();
         if (postInitInvite) {
           localStorage.setItem('pending_invite_code', postInitInvite);
+        }
+        const postInitPrefill = extractPrefillFromUrl();
+        if (postInitPrefill) {
+          localStorage.setItem('pending_prefill_draft', JSON.stringify(postInitPrefill));
         }
 
         if (!liff.isLoggedIn()) {
@@ -1317,6 +1355,14 @@
         const finalInviteCode = localStorage.getItem('pending_invite_code') || '';
         if (finalInviteCode) {
           localStorage.removeItem('pending_invite_code');
+        }
+
+        const savedPrefillRaw = localStorage.getItem('pending_prefill_draft');
+        if (savedPrefillRaw) {
+          localStorage.removeItem('pending_prefill_draft');
+          try {
+            pendingPrefillDraft = JSON.parse(savedPrefillRaw);
+          } catch (e) {}
         }
 
         if (window.history && window.history.replaceState) {
@@ -1376,7 +1422,6 @@
         showToast(state.toastMessage);
       }
 
-      // 若後端回傳有待確認的代管成員認領選擇，開啟兩段式認領彈窗
       if (state.pendingInviteChoice) {
         openClaimStep1Modal(state.pendingInviteChoice);
       }
@@ -1410,7 +1455,6 @@
       const perm = data.permissions;
       const personal = data.personal;
 
-      // 帳本名稱（創建者且未結算時顯示編輯鈕）
       const titleEl = document.getElementById('ledgerTitle');
       if (perm.canRenameLedger) {
         titleEl.innerHTML = escapeHtml(ledger.title) +
@@ -1420,7 +1464,6 @@
         titleEl.textContent = ledger.title;
       }
 
-      // 成員人數與個人暱稱改名鈕
       document.getElementById('ledgerMeta').innerHTML =
         '成員 ' + data.members.length + ' 人・我的暱稱：<b>' + escapeHtml(personal.nickname) + '</b>' +
         '<button type="button" class="edit-link" style="margin-top:0; margin-left:6px; padding:2px 7px;" onclick="openNicknameModal(\'' + currentUser.userId + '\')">' +
@@ -1441,7 +1484,6 @@
       heroNetEl.textContent = formatNetMoney(personal.netBalance);
       heroNetEl.className = personal.netBalance > 0 ? 'text-green' : (personal.netBalance < 0 ? 'text-red' : '');
 
-      // 邀請列與創建者「新增代管成員」按鈕控制
       const inviteBar = document.getElementById('creatorInviteBar');
       if (perm.canInvite) {
         inviteBar.classList.remove('hidden');
@@ -1474,6 +1516,26 @@
       renderExpensesTab(data);
       renderPersonalTab(data);
       renderSettlementTab(data);
+
+      // 若是從聊天室草稿卡片點擊「進網頁細調」進入，自動切換至對應帳本並彈出預填視窗
+      if (pendingPrefillDraft) {
+        const draftToApply = pendingPrefillDraft;
+        if (draftToApply.ledgerId && draftToApply.ledgerId !== state.activeLedgerId) {
+          const existsInUserLedgers = state.ledgers.some(l => l.ledger_id === draftToApply.ledgerId);
+          if (existsInUserLedgers) {
+            callGasApi('switchLedger', { userId: currentUser.userId, ledgerId: draftToApply.ledgerId }, '正在切換至草稿目標帳本...');
+            return;
+          }
+        }
+
+        pendingPrefillDraft = null;
+        if (perm.canEdit) {
+          openExpenseModal(null, draftToApply);
+          showToast('已帶入聊天室草稿，請確認均攤成員後儲存');
+        } else {
+          showToast('此帳本已結算鎖定，無法新增帳務');
+        }
+      }
     }
 
     function renderExpensesTab(data) {
@@ -1598,12 +1660,10 @@
         const meLabel = isMe ? ' <span style="color:var(--text-sub); font-weight:normal;">(我)</span>' : '';
         const guestTag = m.isGuest ? '<span class="guest-badge">未綁定</span>' : '';
 
-        // 改名按鈕：創建者可幫所有人改名，一般成員可改自己
         const renameBtn = (isCreator || isMe)
           ? '<button type="button" class="mini-icon-btn" onclick="openNicknameModal(\'' + m.userId + '\')" title="修改暱稱"><i class="fa-solid fa-pen"></i></button>'
           : '';
 
-        // 移除按鈕：僅創建者可移除非建立者的其他成員
         const removeBtn = (isCreator && m.userId !== data.ledger.creator_id)
           ? '<button type="button" class="mini-icon-btn danger" onclick="openRemoveMemberModal(\'' + m.userId + '\')" title="移除成員"><i class="fa-solid fa-trash"></i></button>'
           : '';
@@ -1618,7 +1678,7 @@
     }
 
     // =========================================================================
-    // 4. 互動操作（分頁、帳本、帳務明細、成員管理、兩段式認領、純文字報表）
+    // 4. 互動操作
     // =========================================================================
     function switchTab(tabName) {
       currentTab = tabName;
@@ -1666,7 +1726,6 @@
       }, '正在檢查邀請碼...');
     }
 
-    // --- 兩段式代管成員認領／合併流程 ---
     function openClaimStep1Modal(choiceData) {
       pendingInviteChoiceData = choiceData;
       selectedClaimGuest = null;
@@ -1739,7 +1798,6 @@
       }, '正在認領並合併歷史帳務...');
     }
 
-    // --- 編輯帳本名稱 ---
     function openRenameLedgerModal() {
       const data = appState && appState.activeLedgerData;
       if (!data || !data.permissions.canRenameLedger) return;
@@ -1765,7 +1823,6 @@
       }, '正在更新帳本名稱...');
     }
 
-    // --- 新增代管成員 ---
     function submitAddGuestMember() {
       const name = document.getElementById('newGuestNameInput').value.trim();
       if (!name) {
@@ -1781,7 +1838,6 @@
       }, '正在新增代管成員...');
     }
 
-    // --- 修改成員暱稱（自己或創建者代改） ---
     function openNicknameModal(targetUserId) {
       const data = appState && appState.activeLedgerData;
       if (!data) return;
@@ -1817,7 +1873,6 @@
       }, '正在更新暱稱...');
     }
 
-    // --- 移除無帳務成員 ---
     function openRemoveMemberModal(targetUserId) {
       const data = appState && appState.activeLedgerData;
       if (!data || !data.permissions.isCreator) return;
@@ -1840,7 +1895,6 @@
       }, '正在檢查並移除成員...');
     }
 
-    // --- 一鍵複製純文字結算報表 ---
     async function copyTextSettlementReport() {
       const data = appState && appState.activeLedgerData;
       if (!data) return;
@@ -1887,12 +1941,13 @@
       }
     }
 
-    // --- 新增 / 編輯帳務明細 ---
-    function openExpenseModal(expenseId) {
+    // --- 新增 / 編輯帳務明細（支援帶入聊天室草稿 prefillData） ---
+    function openExpenseModal(expenseId, prefillData) {
       const data = appState.activeLedgerData;
       if (!data || !data.permissions.canEdit) return;
 
       const members = data.members || [];
+      const memberIdSet = new Set(members.map(m => m.userId));
       const payerSelect = document.getElementById('expPayerSelect');
       payerSelect.innerHTML = members.map(function (m) {
         const suffix = m.userId === currentUser.userId ? ' (我)' : (m.isGuest ? ' (未綁定)' : '');
@@ -1906,13 +1961,29 @@
 
       document.getElementById('editExpenseId').value = targetExpense ? targetExpense.expense_id : '';
       document.getElementById('expenseModalTitle').textContent = targetExpense ? '編輯帳務項目' : '新增帳務項目';
-      document.getElementById('expItemName').value = targetExpense ? targetExpense.item_name : '';
-      document.getElementById('expAmount').value = targetExpense ? targetExpense.amount : '';
-      payerSelect.value = targetExpense ? targetExpense.payer_id : currentUser.userId;
 
-      const selectedSplitSet = new Set(
-        targetExpense ? targetExpense.split_users : members.map(function (m) { return m.userId; })
-      );
+      if (targetExpense) {
+        document.getElementById('expItemName').value = targetExpense.item_name;
+        document.getElementById('expAmount').value = targetExpense.amount;
+        payerSelect.value = targetExpense.payer_id;
+      } else if (prefillData) {
+        document.getElementById('expItemName').value = prefillData.itemName || '';
+        document.getElementById('expAmount').value = prefillData.amount || '';
+        payerSelect.value = memberIdSet.has(prefillData.payerId) ? prefillData.payerId : currentUser.userId;
+      } else {
+        document.getElementById('expItemName').value = '';
+        document.getElementById('expAmount').value = '';
+        payerSelect.value = currentUser.userId;
+      }
+
+      let selectedSplitIds = members.map(m => m.userId);
+      if (targetExpense) {
+        selectedSplitIds = targetExpense.split_users;
+      } else if (prefillData && Array.isArray(prefillData.splitUsers) && prefillData.splitUsers.length > 0) {
+        const validPrefillSplits = prefillData.splitUsers.filter(uid => memberIdSet.has(uid));
+        if (validPrefillSplits.length > 0) selectedSplitIds = validPrefillSplits;
+      }
+      const selectedSplitSet = new Set(selectedSplitIds);
 
       const grid = document.getElementById('splitMembersGrid');
       grid.innerHTML = members.map(function (m) {
@@ -2015,7 +2086,6 @@
       }, '正在刪除帳務...');
     }
 
-    // --- 分享邀請連結 ---
     function openShareModal() {
       const ledger = appState.activeLedgerData.ledger;
       document.getElementById('modalInviteCodeBadge').textContent = ledger.invite_code;
