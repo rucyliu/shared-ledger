@@ -218,6 +218,18 @@
       vertical-align: middle;
     }
 
+    .admin-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      background: #fef3c7;
+      color: #b45309;
+      padding: 1px 5px;
+      border-radius: 4px;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+
     .hero-stats {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -530,11 +542,17 @@
       gap: 7px;
       box-shadow: 0 4px 12px rgba(217, 115, 123, 0.3);
       text-decoration: none;
+      transition: opacity 0.15s;
     }
 
     .btn-primary:active {
       background: var(--primary-dark);
       transform: scale(0.99);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
     }
 
     .btn-danger {
@@ -1123,10 +1141,10 @@
           </table>
         </div>
 
-        <!-- 創建者正式結算管理（進行中才顯示） -->
+        <!-- 帳本管理者正式結算管理（進行中才顯示） -->
         <div id="creatorSettleCard" class="card hidden" style="border-color:#f5c2c7; background:#fffafa;">
           <div class="section-title" style="color:var(--red);">
-            <span><i class="fa-solid fa-lock"></i> 帳本創建者結算管理</span>
+            <span><i class="fa-solid fa-lock"></i> 帳本管理者結算管理</span>
           </div>
           <p style="font-size:12px; color:var(--text-sub); margin:0 0 12px 0; line-height:1.5;">
             確認所有成員皆已填寫完畢後，可執行正式結算。<b>結算後帳本將永久鎖定不可再編輯</b>，並自動透過 LINE 通知全體成員最終轉帳金額。
@@ -1136,7 +1154,20 @@
           </button>
         </div>
 
-        <!-- 創建者永久刪除帳本管理（進行中與已結算皆可顯示） -->
+        <!-- 帳本管理者權限移交（進行中與已結算皆可顯示） -->
+        <div id="creatorTransferAdminCard" class="card hidden" style="border-color:#d7e5f7; background:#f7fbff;">
+          <div class="section-title" style="color:#2c66b8;">
+            <span><i class="fa-solid fa-user-shield"></i> 移交帳本管理者權限</span>
+          </div>
+          <p style="font-size:12px; color:var(--text-sub); margin:0 0 12px 0; line-height:1.5;">
+            可指定本帳本中另一位已綁定 LINE 的成員接替作為「帳本管理者」。<b>移交後你將立即轉為一般成員</b>，不再具備結算、移除成員與刪除帳本權限。
+          </p>
+          <button type="button" class="btn-secondary" style="width:100%; background:#eef6fc; color:#2c66b8; border:1px solid #bfd7f2;" onclick="openTransferAdminModal()">
+            <i class="fa-solid fa-right-left"></i> 指定接替的帳本管理者
+          </button>
+        </div>
+
+        <!-- 帳本管理者永久刪除帳本管理（進行中與已結算皆可顯示） -->
         <div id="creatorDeleteLedgerCard" class="card hidden" style="border-color:#eadcd7; background:#faf6f5;">
           <div class="section-title" style="color:var(--text-sub);">
             <span><i class="fa-solid fa-trash-can"></i> 刪除記帳本</span>
@@ -1397,7 +1428,7 @@
         <button class="close-btn" onclick="closeModal('claimGuestStep1Modal')"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div style="background:#faf6f5; border:1px solid var(--border-color); border-radius:12px; padding:12px; font-size:13px; color:var(--text-sub); line-height:1.55; margin-bottom:14px;">
-        帳本建立者已預先建立以下「未綁定 LINE」的代管名單。<br>
+        帳本管理者已預先建立以下「未綁定 LINE」的代管名單。<br>
         • 若名單中有你的名字，請點擊對應項目進行<b>認領合併</b>，原本幫你代記的帳務會自動轉入你的帳號。<br>
         • 若名單中<b>沒有你</b>，或你不確定，請直接點選下方「我是新成員」。
       </div>
@@ -1445,7 +1476,7 @@
     </div>
   </div>
 
-  <!-- 12. 永久刪除記帳本 Modal（僅創建者可用，需輸入完整帳本名稱確認） -->
+  <!-- 12. 永久刪除記帳本 Modal（僅帳本管理者可用，需輸入完整帳本名稱確認） -->
   <div id="deleteLedgerModal" class="modal-backdrop">
     <div class="modal-sheet">
       <div class="modal-header">
@@ -1471,7 +1502,33 @@
     </div>
   </div>
 
-  <!-- 13. 操作手冊與常見問題 (FAQ) Modal -->
+  <!-- 13. 移交帳本管理者權限 Modal（僅現任帳本管理者可用） -->
+  <div id="transferAdminModal" class="modal-backdrop">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h3 style="color:#2c66b8;"><i class="fa-solid fa-user-shield"></i> 移交帳本管理者權限</h3>
+        <button class="close-btn" onclick="closeModal('transferAdminModal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div style="background:#fff3cd; color:#664d03; padding:10px 12px; border-radius:10px; font-size:13px; line-height:1.55; margin-bottom:14px;">
+        ⚠️ 移交完成後，你將<b>立即失去帳本管理者權限</b>（無法再執行結算、修改他人暱稱、移除成員或刪除帳本），系統會自動透過 LINE 通知接替的成員。
+      </div>
+      <div id="transferAdminFormWrap" class="form-group">
+        <label class="form-label">選擇接替的帳本管理者（僅顯示已綁定 LINE 成員）</label>
+        <select id="transferAdminSelect" class="form-control"></select>
+      </div>
+      <div id="transferAdminEmptyHint" class="hidden" style="background:#faf6f5; border:1px solid var(--border-color); border-radius:10px; padding:12px; font-size:13px; color:var(--text-sub); line-height:1.5; margin-bottom:14px;">
+        目前帳本中沒有其他已綁定 LINE 帳號的成員可以接替（未綁定的代管成員無法擔任帳本管理者）。
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" style="flex:1;" onclick="closeModal('transferAdminModal')">取消</button>
+        <button id="btnConfirmTransferAdmin" type="button" class="btn-primary" style="flex:1; background:#2c66b8; box-shadow:none;" onclick="executeTransferAdmin()">
+          <i class="fa-solid fa-check"></i> 確認移交權限
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 14. 操作手冊與常見問題 (FAQ) Modal -->
   <div id="faqModal" class="modal-backdrop">
     <div class="modal-sheet">
       <div class="modal-header">
@@ -1481,7 +1538,7 @@
 
       <div class="faq-search-wrap">
         <i class="fa-solid fa-magnifying-glass"></i>
-        <input type="text" id="faqSearchInput" class="faq-search-input" placeholder="搜尋關鍵字（例如：代管、編號、快速記帳、結算、刪除）" oninput="filterFaqItems()" />
+        <input type="text" id="faqSearchInput" class="faq-search-input" placeholder="搜尋關鍵字（例如：代管、編號、管理者、移交、結算）" oninput="filterFaqItems()" />
       </div>
 
       <div id="faqEmptyNotice" class="hidden" style="text-align:center; padding:24px 0; color:var(--text-sub); font-size:13px;">
@@ -1499,7 +1556,7 @@
               <i class="fa-solid fa-chevron-down faq-chevron"></i>
             </summary>
             <div class="faq-a">
-              點擊頂部 <b>「建立」</b> 輸入帳本名稱即可開帳。帳本進行中時，所有成員都可以在主卡片下方看到 <b>6 碼邀請碼</b>，點擊 <b>「邀請朋友」</b> 即可複製專屬連結或透過 LINE 好友選單傳送；朋友點擊連結或輸入邀請碼即可加入。
+              點擊頂部 <b>「建立」</b> 輸入帳本名稱即可開帳並成為該帳本的 <b>帳本管理者</b>。帳本進行中時，所有成員都可以在主卡片下方看到 <b>6 碼邀請碼</b>，點擊 <b>「邀請朋友」</b> 即可複製專屬連結或透過 LINE 好友選單傳送；朋友點擊連結或輸入邀請碼即可加入。
             </div>
           </details>
 
@@ -1509,7 +1566,7 @@
               <i class="fa-solid fa-chevron-down faq-chevron"></i>
             </summary>
             <div class="faq-a">
-              若帳本建立者先前已幫你建立「未綁定 LINE」的代管名單，受邀加入時系統會先詢問身分：<br>
+              若帳本管理者先前已幫你建立「未綁定 LINE」的代管名單，受邀加入時系統會先詢問身分：<br>
               • <b>名單中有你</b>：點擊對應名字並二次確認後，原本幫你代記的墊付與均攤紀錄會自動合併至你的 LINE 帳號（合併後無法還原）。<br>
               • <b>名單中沒有你或不確定</b>：請直接點選 <b>「我是新成員，直接加入」</b>。
             </div>
@@ -1521,7 +1578,7 @@
               <i class="fa-solid fa-chevron-down faq-chevron"></i>
             </summary>
             <div class="faq-a">
-              未加好友仍可正常開啟網頁記帳；但加入官方帳號好友後，才能在<b>正式結算</b>或<b>被加入新帳本</b>時收到 LINE 推播通知，也能直接在 LINE 聊天室輸入文字快速記帳與查詢個人明細。
+              未加好友仍可正常開啟網頁記帳；但加入官方帳號好友後，才能在<b>正式結算</b>、<b>被加入新帳本</b>或<b>接任帳本管理者</b>時收到 LINE 推播通知，也能直接在 LINE 聊天室輸入文字快速記帳與查詢個人明細。
             </div>
           </details>
         </div>
@@ -1536,7 +1593,7 @@
               <i class="fa-solid fa-chevron-down faq-chevron"></i>
             </summary>
             <div class="faq-a">
-              帳本創建者可點擊主卡片下方的 <b>「代管成員」</b>，輸入暱稱（例如：阿公、不記帳的小美）建立 <span class="guest-badge" style="margin-left:0;">未綁定</span> 成員。代管成員一樣可作為墊付人或均攤對象參與結算，日後對方若加入帳本也能隨時認領合併。
+              帳本管理者可點擊主卡片下方的 <b>「代管成員」</b>，輸入暱稱（例如：阿公、不記帳的小美）建立 <span class="guest-badge" style="margin-left:0;">未綁定</span> 成員。代管成員一樣可作為墊付人或均攤對象參與結算，日後對方若加入帳本也能隨時認領合併。
             </div>
           </details>
 
@@ -1546,7 +1603,7 @@
               <i class="fa-solid fa-chevron-down faq-chevron"></i>
             </summary>
             <div class="faq-a">
-              只要帳本狀態為 <b>「進行中」</b>，所有成員皆可至 <b>「帳務明細」</b> 分頁點擊項目右側的 <b>「編輯」</b> 修改名稱、金額、墊付人或均攤人，也可刪除該筆項目。一旦創建者執行「正式結算」後，帳本即鎖定為唯讀。
+              只要帳本狀態為 <b>「進行中」</b>，所有成員皆可至 <b>「帳務明細」</b> 分頁點擊項目右側的 <b>「編輯」</b> 修改名稱、金額、墊付人或均攤人，也可刪除該筆項目。一旦帳本管理者執行「正式結算」後，帳本即鎖定為唯讀。
             </div>
           </details>
 
@@ -1556,7 +1613,7 @@
               <i class="fa-solid fa-chevron-down faq-chevron"></i>
             </summary>
             <div class="faq-a">
-              點擊主卡片上「我的暱稱」旁的 <b>「改名」</b>，即可設定專屬於目前帳本的顯示名稱；<b>帳本創建者</b>則可在 <b>「結算總覽」</b> 的成員統計表中，點擊任一位成員（包含代管成員）旁的鉛筆圖示協助修改暱稱。
+              點擊主卡片上「我的暱稱」旁的 <b>「改名」</b>，即可設定專屬於目前帳本的顯示名稱；<b>帳本管理者</b>則可在 <b>「結算總覽」</b> 的成員統計表中，點擊任一位成員（包含代管成員）旁的鉛筆圖示協助修改暱稱。
             </div>
           </details>
         </div>
@@ -1601,7 +1658,7 @@
 
         <!-- 分類四 -->
         <div class="faq-category-group">
-          <div class="faq-cat-title"><i class="fa-solid fa-calculator"></i> 四、結算、報表與週期管理</div>
+          <div class="faq-cat-title"><i class="fa-solid fa-calculator"></i> 四、結算、報表與管理者權限</div>
 
           <details class="faq-item">
             <summary class="faq-q">
@@ -1619,19 +1676,20 @@
               <i class="fa-solid fa-chevron-down faq-chevron"></i>
             </summary>
             <div class="faq-a">
-              • <b>正式結算</b>：帳本創建者可在 <b>「結算總覽」</b> 點擊「正式結算並鎖定帳本」，鎖定後全員變為唯讀並自動收到 LINE 結算通知。<br>
+              • <b>正式結算</b>：帳本管理者可在 <b>「結算總覽」</b> 點擊「正式結算並鎖定帳本」，鎖定後全員變為唯讀並自動收到 LINE 結算通知。<br>
               • <b>保存與分享</b>：所有成員隨時都可在「結算總覽」點擊 <b>「複製文字」</b> 貼到 LINE 群組，或點 <b>「匯出 CSV」</b> 下載 Excel 檔案保存。
             </div>
           </details>
 
           <details class="faq-item">
             <summary class="faq-q">
-              <span>12. 每月固定班底開新帳本要重邀嗎？如何刪除帳本？</span>
+              <span>12. 如何沿用固定成員、移交管理權限或刪除帳本？</span>
               <i class="fa-solid fa-chevron-down faq-chevron"></i>
             </summary>
             <div class="faq-a">
               • <b>沿用固定成員</b>：點擊頂部「建立」新帳本時，勾選 <b>「直接加入目前帳本的成員」</b>，即可一鍵帶入原成員（沿用暱稱）並自動推播通知大家。<br>
-              • <b>刪除帳本</b>：僅創建者可至 <b>「結算總覽」</b> 最下方點擊「刪除此記帳本」，完整輸入帳本名稱確認後即可永久清除所有資料。
+              • <b>移交管理權限</b>：帳本管理者可至 <b>「結算總覽」</b> 指定另一位已綁定 LINE 的成員接替作為帳本管理者，移交後系統會推播通知接任者。<br>
+              • <b>刪除帳本</b>：僅帳本管理者可至 <b>「結算總覽」</b> 最下方點擊「刪除此記帳本」，完整輸入帳本名稱確認後即可永久清除所有資料。
             </div>
           </details>
         </div>
@@ -1960,6 +2018,12 @@
         document.getElementById('creatorSettleCard').classList.add('hidden');
       }
 
+      if (perm.canTransferAdmin) {
+        document.getElementById('creatorTransferAdminCard').classList.remove('hidden');
+      } else {
+        document.getElementById('creatorTransferAdminCard').classList.add('hidden');
+      }
+
       if (perm.canDeleteLedger) {
         document.getElementById('creatorDeleteLedgerCard').classList.remove('hidden');
       } else {
@@ -2104,25 +2168,26 @@
         }).join('');
       }
 
-      const isCreator = data.permissions.isCreator;
+      const isAdmin = data.permissions.isCreator;
       const tbody = document.getElementById('memberSummaryBody');
       tbody.innerHTML = (data.memberSummaries || []).map(function (m, idx) {
         const netClass = m.netBalance > 0 ? 'text-green' : (m.netBalance < 0 ? 'text-red' : '');
         const isMe = m.userId === currentUser.userId;
         const meLabel = isMe ? ' <span style="color:var(--text-sub); font-weight:normal;">(我)</span>' : '';
+        const adminTag = m.userId === data.ledger.creator_id ? '<span class="admin-badge">管理者</span>' : '';
         const guestTag = m.isGuest ? '<span class="guest-badge">未綁定</span>' : '';
         const numBadge = '<span style="color:var(--text-sub); font-size:12px; font-weight:700;">' + (idx + 1) + '. </span>';
 
-        const renameBtn = (isCreator || isMe)
+        const renameBtn = (isAdmin || isMe)
           ? '<button type="button" class="mini-icon-btn" onclick="openNicknameModal(\'' + m.userId + '\')" title="修改暱稱"><i class="fa-solid fa-pen"></i></button>'
           : '';
 
-        const removeBtn = (isCreator && m.userId !== data.ledger.creator_id)
+        const removeBtn = (isAdmin && m.userId !== data.ledger.creator_id)
           ? '<button type="button" class="mini-icon-btn danger" onclick="openRemoveMemberModal(\'' + m.userId + '\')" title="移除成員"><i class="fa-solid fa-trash"></i></button>'
           : '';
 
         return '<tr>' +
-          '<td style="font-weight:700;">' + numBadge + escapeHtml(m.nickname) + meLabel + guestTag + renameBtn + removeBtn + '</td>' +
+          '<td style="font-weight:700;">' + numBadge + escapeHtml(m.nickname) + meLabel + adminTag + guestTag + renameBtn + removeBtn + '</td>' +
           '<td class="num-col">' + formatMoney(m.totalPaid) + '</td>' +
           '<td class="num-col">' + formatMoney(m.totalShare) + '</td>' +
           '<td class="num-col ' + netClass + '" style="font-weight:800;">' + formatNetMoney(m.netBalance) + '</td>' +
@@ -2389,6 +2454,55 @@
       }, '正在更新帳本名稱...');
     }
 
+    // --- 移交帳本管理者權限 ---
+    function openTransferAdminModal() {
+      const data = appState && appState.activeLedgerData;
+      if (!data || !data.permissions.canTransferAdmin) return;
+
+      const candidates = (data.members || []).filter(function (m) {
+        return m.userId !== currentUser.userId && !m.isGuest;
+      });
+
+      const selectEl = document.getElementById('transferAdminSelect');
+      const formWrap = document.getElementById('transferAdminFormWrap');
+      const emptyHint = document.getElementById('transferAdminEmptyHint');
+      const confirmBtn = document.getElementById('btnConfirmTransferAdmin');
+
+      if (candidates.length === 0) {
+        selectEl.innerHTML = '';
+        formWrap.classList.add('hidden');
+        emptyHint.classList.remove('hidden');
+        confirmBtn.disabled = true;
+      } else {
+        selectEl.innerHTML = candidates.map(function (m) {
+          return '<option value="' + m.userId + '">' + escapeHtml(m.nickname) + '</option>';
+        }).join('');
+        formWrap.classList.remove('hidden');
+        emptyHint.classList.add('hidden');
+        confirmBtn.disabled = false;
+      }
+
+      openModal('transferAdminModal');
+    }
+
+    function executeTransferAdmin() {
+      const data = appState && appState.activeLedgerData;
+      if (!data || !data.permissions.canTransferAdmin) return;
+
+      const newAdminId = document.getElementById('transferAdminSelect').value;
+      if (!newAdminId) {
+        showToast('請選擇要接替的成員');
+        return;
+      }
+
+      closeModal('transferAdminModal');
+      callGasApi('transferAdmin', {
+        userId: currentUser.userId,
+        ledgerId: appState.activeLedgerId,
+        newAdminUserId: newAdminId
+      }, '正在移交帳本管理者權限...');
+    }
+
     function openDeleteLedgerModal() {
       const data = appState && appState.activeLedgerData;
       if (!data || !data.permissions.canDeleteLedger) return;
@@ -2452,7 +2566,7 @@
         : '修改「' + targetMember.nickname + '」的顯示暱稱';
       document.getElementById('nicknameModalDesc').textContent = isSelf
         ? '此暱稱僅會套用在「' + data.ledger.title + '」中，方便大家在分帳與結算時辨識。'
-        : '身為帳本建立者，你可以協助調整此成員在「' + data.ledger.title + '」中的顯示名稱。';
+        : '身為帳本管理者，你可以協助調整此成員在「' + data.ledger.title + '」中的顯示名稱。';
       document.getElementById('editNicknameInput').value = targetMember.nickname || '';
 
       openModal('editNicknameModal');
@@ -2636,7 +2750,7 @@
 
       const isLineInApp = (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient());
       if (isLineInApp) {
-        showToast('已執行匯出！若 LINE 內建視窗未自動儲存，請改用其他瀏覽器開啟後再下載', 8000);
+        showToast('已執行匯出！若 LINE 內建視窗未自動儲存，請改用其他瀏覽器開啟後下載', 5000);
       } else {
         showToast('已下載「' + fileName + '」');
       }
