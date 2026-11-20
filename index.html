@@ -1109,13 +1109,49 @@
         // =========================================================================
         (async function initLiffApp() {
           try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const mockUserId = urlParams.get('mock_user');
+            const mockUserName = urlParams.get('mock_name') || '測試成員';
             const incomingInvite = extractInviteCodeFromUrl();
+    
+            // 【分支 A：模擬測試模式】直接以網址參數身分啟動，不走 LINE 登入
+            if (ENABLE_MOCK_MODE && mockUserId) {
+              isMockMode = true;
+              currentUser = {
+                userId: mockUserId,
+                displayName: mockUserName
+              };
+    
+              // 顯示模擬身分提示條
+              const banner = document.createElement('div');
+              banner.style.cssText = 'background:#3d2c27; color:#fcecef; font-size:12px; text-align:center; padding:6px; font-weight:700;';
+              banner.textContent = '🧪 模擬測試模式｜目前角色：' + mockUserName + ' (' + mockUserId + ')';
+              document.body.insertBefore(banner, document.body.firstChild);
+    
+              // 只清除網址中的 invite 參數，保留 mock_user 與 mock_name（方便重新整理頁面）
+              if (incomingInvite && window.history && window.history.replaceState) {
+                urlParams.delete('invite');
+                const remainQuery = urlParams.toString();
+                const cleanMockUrl = window.location.pathname + (remainQuery ? '?' + remainQuery : '');
+                window.history.replaceState({}, document.title, cleanMockUrl);
+              }
+    
+              document.getElementById('topControlBar').classList.remove('hidden');
+              await callGasApi('bootstrap', {
+                userProfile: currentUser,
+                inviteCode: incomingInvite
+              }, '正在載入模擬帳號資料...');
+              return;
+            }
+    
+            // 【分支 B：正式 LINE LIFF 模式】在登入跳轉前先將邀請碼暫存到 localStorage
             if (incomingInvite) {
               localStorage.setItem('pending_invite_code', incomingInvite);
             }
     
             await liff.init({ liffId: LIFF_ID });
     
+            // liff.init() 展開 liff.state 後再確認一次邀請碼
             const postInitInvite = extractInviteCodeFromUrl();
             if (postInitInvite) {
               localStorage.setItem('pending_invite_code', postInitInvite);
@@ -1132,12 +1168,12 @@
               displayName: profile.displayName
             };
     
+            // 驗證跳轉回來後，取出暫存的邀請碼並清除
             const finalInviteCode = localStorage.getItem('pending_invite_code') || '';
             if (finalInviteCode) {
               localStorage.removeItem('pending_invite_code');
             }
     
-            // 清理網址列參數
             if (window.history && window.history.replaceState) {
               window.history.replaceState({}, document.title, window.location.pathname);
             }
