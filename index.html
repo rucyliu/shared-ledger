@@ -931,11 +931,16 @@
       <!-- 分頁 3：結算總覽與成員匯總 -->
       <div id="tab-settlement" class="tab-panel hidden">
         <div class="card">
-          <div class="section-title">
+          <div class="section-title" style="flex-wrap:wrap;">
             <span><i class="fa-solid fa-money-bill-transfer" style="color:var(--primary);"></i> 最小轉帳結清路徑</span>
-            <button type="button" class="icon-btn primary-outline" style="padding:4px 9px; font-size:12px;" onclick="copyTextSettlementReport()">
-              <i class="fa-regular fa-copy"></i> 複製文字結果
-            </button>
+            <div style="display:flex; gap:6px;">
+              <button type="button" class="icon-btn primary-outline" style="padding:4px 9px; font-size:12px;" onclick="copyTextSettlementReport()">
+                <i class="fa-regular fa-copy"></i> 複製文字
+              </button>
+              <button type="button" class="icon-btn" style="padding:4px 9px; font-size:12px; border-color:#b7dfc9; background:var(--green-bg); color:var(--green);" onclick="exportLedgerCsv()">
+                <i class="fa-solid fa-file-csv"></i> 匯出 CSV
+              </button>
+            </div>
           </div>
           <div id="allTransferList"></div>
         </div>
@@ -2040,6 +2045,110 @@
         document.execCommand('copy');
         document.body.removeChild(tempArea);
         showToast('已複製純文字結算結果！');
+      }
+    }
+
+    function escapeCsvCell(val) {
+      const str = String(val === null || val === undefined ? '' : val);
+      if (/[",\r\n]/.test(str)) {
+        return '"' + str.replace(/"/g, '""') + '"';
+      }
+      return str;
+    }
+
+    function exportLedgerCsv() {
+      const data = appState && appState.activeLedgerData;
+      if (!data) return;
+
+      const l = data.ledger;
+      const rows = [];
+      const addRow = function (cols) {
+        rows.push(cols.map(escapeCsvCell).join(','));
+      };
+
+      // 1. 帳本基本資訊
+      addRow(['【帳本結算報表】']);
+      addRow(['帳本名稱', l.title]);
+      addRow(['帳本狀態', l.status === 'SETTLED' ? '已正式結算鎖定' : '進行中（試算）']);
+      addRow(['帳本總支出', l.totalAmount]);
+      if (l.settled_at) {
+        addRow(['結算時間', l.settled_at]);
+      }
+      rows.push('');
+
+      // 2. 成員墊付與應付統計
+      addRow(['【一、成員墊付與結算統計】']);
+      addRow(['編號', '成員暱稱', '帳號狀態', '已預先支付', '均攤應付總額', '結算淨額（正數應收／負數應付）']);
+      (data.memberSummaries || []).forEach(function (m, idx) {
+        addRow([
+          idx + 1,
+          m.nickname,
+          m.isGuest ? '未綁定代管' : 'LINE 帳號',
+          m.totalPaid,
+          m.totalShare,
+          m.netBalance
+        ]);
+      });
+      rows.push('');
+
+      // 3. 最小轉帳結清路徑
+      addRow(['【二、最小轉帳結清路徑】']);
+      addRow(['序號', '付款人', '收款人', '應轉帳金額']);
+      if (!data.transfers || data.transfers.length === 0) {
+        addRow(['-', '目前帳目已平衡，無需轉帳', '', 0]);
+      } else {
+        data.transfers.forEach(function (t, idx) {
+          addRow([idx + 1, t.fromName, t.toName, t.amount]);
+        });
+      }
+      rows.push('');
+
+      // 4. 所有帳務明細（依時間由舊到新排序）
+      addRow(['【三、所有帳務明細】']);
+      addRow(['序號', '建立時間', '項目名稱', '支付金額', '預先支付人', '均攤人數', '每人平均分攤', '均攤成員名單']);
+      const chronologicalExpenses = (data.expenses || []).slice().reverse();
+      if (chronologicalExpenses.length === 0) {
+        addRow(['-', '-', '尚無帳務紀錄', 0, '-', 0, 0, '-']);
+      } else {
+        chronologicalExpenses.forEach(function (exp, idx) {
+          const splitCount = exp.split_users ? exp.split_users.length : 0;
+          const perShare = splitCount > 0 ? Math.round((exp.amount / splitCount) * 10) / 10 : 0;
+          addRow([
+            idx + 1,
+            exp.created_at,
+            exp.item_name,
+            exp.amount,
+            exp.payerName,
+            splitCount,
+            perShare,
+            (exp.splitNames || []).join('、')
+          ]);
+        });
+      }
+
+      // 加上 UTF-8 BOM (\uFEFF)，確保 Excel 開啟繁體中文不會亂碼
+      const csvContent = '\uFEFF' + rows.join('\r\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+
+      const safeTitle = String(l.title || '共享記帳本').replace(/[\\/:*?"<>|]/g, '_');
+      const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      const fileName = safeTitle + '_結算明細_' + todayStr + '.csv';
+
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+
+      // 針對 iOS 手機 LINE 內建瀏覽器可能阻擋 blob 下載的貼心提醒
+      const isLineInApp = (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient());
+      if (isLineInApp) {
+        showToast('已觸發 CSV 下載！若 iPhone LINE 內建視窗未自動儲存，請點右下角「⋮」改用 Safari 開啟後下載', 5000);
+      } else {
+        showToast('已下載「' + fileName + '」');
       }
     }
 
