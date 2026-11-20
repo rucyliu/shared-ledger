@@ -513,6 +513,28 @@
       align-items: center;
       justify-content: center;
       gap: 7px;
+      transition: opacity 0.15s;
+    }
+
+    .btn-danger:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .btn-danger-outline {
+      width: 100%;
+      background: #fff;
+      color: var(--red);
+      border: 1.5px solid #f1b0b7;
+      border-radius: 12px;
+      padding: 11px 16px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
     }
 
     .btn-secondary {
@@ -925,7 +947,7 @@
           <table class="member-table">
             <thead>
               <tr>
-                <th>成員</th>
+                <th>成員 (編號)</th>
                 <th class="num-col">已預付</th>
                 <th class="num-col">應均攤</th>
                 <th class="num-col">淨額</th>
@@ -935,6 +957,7 @@
           </table>
         </div>
 
+        <!-- 創建者正式結算管理（進行中才顯示） -->
         <div id="creatorSettleCard" class="card hidden" style="border-color:#f5c2c7; background:#fffafa;">
           <div class="section-title" style="color:var(--red);">
             <span><i class="fa-solid fa-lock"></i> 帳本創建者結算管理</span>
@@ -944,6 +967,19 @@
           </p>
           <button class="btn-danger" onclick="openModal('confirmSettleModal')">
             <i class="fa-solid fa-check-double"></i> 正式結算並鎖定帳本
+          </button>
+        </div>
+
+        <!-- 創建者永久刪除帳本管理（進行中與已結算皆可顯示） -->
+        <div id="creatorDeleteLedgerCard" class="card hidden" style="border-color:#eadcd7; background:#faf6f5;">
+          <div class="section-title" style="color:var(--text-sub);">
+            <span><i class="fa-solid fa-trash-can"></i> 刪除記帳本</span>
+          </div>
+          <p style="font-size:12px; color:var(--text-sub); margin:0 0 12px 0; line-height:1.5;">
+            若此帳本已不需要保留，可將其連同所有帳務明細、成員紀錄一併永久刪除。<b>刪除後所有資料將無法復原。</b>
+          </p>
+          <button type="button" class="btn-danger-outline" onclick="openDeleteLedgerModal()">
+            <i class="fa-solid fa-trash-can"></i> 刪除此記帳本
           </button>
         </div>
       </div>
@@ -1229,13 +1265,37 @@
     </div>
   </div>
 
+  <!-- 12. 永久刪除記帳本 Modal（僅創建者可用，需輸入完整帳本名稱確認） -->
+  <div id="deleteLedgerModal" class="modal-backdrop">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h3 class="text-red"><i class="fa-solid fa-triangle-exclamation"></i> 永久刪除記帳本</h3>
+        <button class="close-btn" onclick="closeModal('deleteLedgerModal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div style="background:var(--red-bg); color:var(--red); padding:11px 12px; border-radius:10px; font-size:13px; line-height:1.55; margin-bottom:14px; font-weight:600;">
+        ⚠️ 警告：執行刪除後，系統將永久清除此記帳本的所有帳務明細、成員名單與結算紀錄，<b>所有資料皆無法復原</b>。
+      </div>
+      <div class="form-group">
+        <label class="form-label" style="display:block; line-height:1.5;">
+          請完整輸入下方帳本名稱以確認刪除：<br>
+          <span style="display:inline-block; margin-top:4px; background:#faf6f5; border:1px solid var(--border-color); padding:2px 8px; border-radius:6px; color:var(--text-main); font-size:14px;" id="deleteLedgerTargetTitle"></span>
+        </label>
+        <input type="text" id="deleteLedgerConfirmInput" class="form-control" placeholder="請在此輸入上方的完整帳本名稱" oninput="onDeleteLedgerInputChange()" />
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" style="flex:1;" onclick="closeModal('deleteLedgerModal')">取消</button>
+        <button id="btnConfirmDeleteLedger" type="button" class="btn-danger" style="flex:1;" disabled onclick="executeDeleteLedger()">
+          <i class="fa-solid fa-trash-can"></i> 確認永久刪除
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
-    // =========================================================================
-    // 請填入你的 LINE LIFF ID 與 GAS 部署網址 (/exec 結尾)
-    // =========================================================================
     const LIFF_ID = "2012687270-krKUpomw";
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyK9l3YGWPuKE9uGLM2TlxwQy0C1nQxQCii79esd2uYFvyt5imgzenyLKWiBaws_HAw/exec";
 
+    // 測試完成正式開放給朋友使用前，請將此改為 false
     const ENABLE_MOCK_MODE = true;
     let isMockMode = false;
 
@@ -1281,7 +1341,7 @@
     }
 
     // =========================================================================
-    // 1. 初始化（支援模擬模式、跨 OAuth 保留邀請碼與聊天室草稿帶入參數）
+    // 1. 初始化
     // =========================================================================
     (async function initLiffApp() {
       try {
@@ -1513,11 +1573,16 @@
         document.getElementById('creatorSettleCard').classList.add('hidden');
       }
 
+      if (perm.canDeleteLedger) {
+        document.getElementById('creatorDeleteLedgerCard').classList.remove('hidden');
+      } else {
+        document.getElementById('creatorDeleteLedgerCard').classList.add('hidden');
+      }
+
       renderExpensesTab(data);
       renderPersonalTab(data);
       renderSettlementTab(data);
 
-      // 若是從聊天室草稿卡片點擊「進網頁細調」進入，自動切換至對應帳本並彈出預填視窗
       if (pendingPrefillDraft) {
         const draftToApply = pendingPrefillDraft;
         if (draftToApply.ledgerId && draftToApply.ledgerId !== state.activeLedgerId) {
@@ -1654,11 +1719,12 @@
 
       const isCreator = data.permissions.isCreator;
       const tbody = document.getElementById('memberSummaryBody');
-      tbody.innerHTML = (data.memberSummaries || []).map(function (m) {
+      tbody.innerHTML = (data.memberSummaries || []).map(function (m, idx) {
         const netClass = m.netBalance > 0 ? 'text-green' : (m.netBalance < 0 ? 'text-red' : '');
         const isMe = m.userId === currentUser.userId;
         const meLabel = isMe ? ' <span style="color:var(--text-sub); font-weight:normal;">(我)</span>' : '';
         const guestTag = m.isGuest ? '<span class="guest-badge">未綁定</span>' : '';
+        const numBadge = '<span style="color:var(--text-sub); font-size:12px; font-weight:700;">' + (idx + 1) + '. </span>';
 
         const renameBtn = (isCreator || isMe)
           ? '<button type="button" class="mini-icon-btn" onclick="openNicknameModal(\'' + m.userId + '\')" title="修改暱稱"><i class="fa-solid fa-pen"></i></button>'
@@ -1669,7 +1735,7 @@
           : '';
 
         return '<tr>' +
-          '<td style="font-weight:700;">' + escapeHtml(m.nickname) + meLabel + guestTag + renameBtn + removeBtn + '</td>' +
+          '<td style="font-weight:700;">' + numBadge + escapeHtml(m.nickname) + meLabel + guestTag + renameBtn + removeBtn + '</td>' +
           '<td class="num-col">' + formatMoney(m.totalPaid) + '</td>' +
           '<td class="num-col">' + formatMoney(m.totalShare) + '</td>' +
           '<td class="num-col ' + netClass + '" style="font-weight:800;">' + formatNetMoney(m.netBalance) + '</td>' +
@@ -1823,6 +1889,42 @@
       }, '正在更新帳本名稱...');
     }
 
+    // --- 永久刪除記帳本（名稱核對防呆） ---
+    function openDeleteLedgerModal() {
+      const data = appState && appState.activeLedgerData;
+      if (!data || !data.permissions.canDeleteLedger) return;
+
+      document.getElementById('deleteLedgerTargetTitle').textContent = data.ledger.title;
+      document.getElementById('deleteLedgerConfirmInput').value = '';
+      document.getElementById('btnConfirmDeleteLedger').disabled = true;
+      openModal('deleteLedgerModal');
+    }
+
+    function onDeleteLedgerInputChange() {
+      const data = appState && appState.activeLedgerData;
+      if (!data) return;
+      const typed = document.getElementById('deleteLedgerConfirmInput').value.trim();
+      document.getElementById('btnConfirmDeleteLedger').disabled = (typed !== data.ledger.title);
+    }
+
+    function executeDeleteLedger() {
+      const data = appState && appState.activeLedgerData;
+      if (!data || !data.permissions.canDeleteLedger) return;
+
+      const typed = document.getElementById('deleteLedgerConfirmInput').value.trim();
+      if (typed !== data.ledger.title) {
+        showToast('請輸入完全相符的帳本名稱');
+        return;
+      }
+
+      closeModal('deleteLedgerModal');
+      callGasApi('deleteLedger', {
+        userId: currentUser.userId,
+        ledgerId: appState.activeLedgerId,
+        confirmTitle: typed
+      }, '正在永久刪除帳本與所有資料...');
+    }
+
     function submitAddGuestMember() {
       const name = document.getElementById('newGuestNameInput').value.trim();
       if (!name) {
@@ -1941,7 +2043,6 @@
       }
     }
 
-    // --- 新增 / 編輯帳務明細（支援帶入聊天室草稿 prefillData） ---
     function openExpenseModal(expenseId, prefillData) {
       const data = appState.activeLedgerData;
       if (!data || !data.permissions.canEdit) return;
