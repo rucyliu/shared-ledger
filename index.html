@@ -1075,43 +1075,32 @@
         let currentTab = 'expenses';
         let isMockMode = false;
         
+        // 從網址參數或 liff.state 中解析邀請碼
+        function extractInviteCodeFromUrl() {
+          const urlParams = new URLSearchParams(window.location.search);
+          let code = urlParams.get('invite');
+          if (!code && urlParams.get('liff.state')) {
+            const stateParams = new URLSearchParams(urlParams.get('liff.state'));
+            code = stateParams.get('invite');
+          }
+          return code ? code.trim().toUpperCase() : '';
+        }
+    
         // =========================================================================
         (async function initLiffApp() {
           try {
-            const urlParams = new URLSearchParams(window.location.search);
-            const mockUserId = urlParams.get('mock_user');
-            const mockUserName = urlParams.get('mock_name') || '測試成員';
-    
-            // 取得邀請碼（支援 ?invite= 或 liff.state）
-            let inviteCode = urlParams.get('invite');
-            if (!inviteCode && urlParams.get('liff.state')) {
-              const stateParams = new URLSearchParams(urlParams.get('liff.state'));
-              inviteCode = stateParams.get('invite');
+            const incomingInvite = extractInviteCodeFromUrl();
+            if (incomingInvite) {
+              localStorage.setItem('pending_invite_code', incomingInvite);
             }
     
-            if (ENABLE_MOCK_MODE && mockUserId) {
-              isMockMode = true;
-              currentUser = {
-                userId: mockUserId,
-                displayName: mockUserName
-              };
-    
-              // 在頁面頂部顯示模擬身分提示條，避免混淆目前分頁是哪位角色
-              const banner = document.createElement('div');
-              banner.style.cssText = 'background:#3d2c27; color:#fcecef; font-size:12px; text-align:center; padding:6px; font-weight:700;';
-              banner.textContent = '🧪 模擬測試模式｜目前角色：' + mockUserName + ' (' + mockUserId + ')';
-              document.body.insertBefore(banner, document.body.firstChild);
-    
-              document.getElementById('topControlBar').classList.remove('hidden');
-              await callGasApi('bootstrap', {
-                userProfile: currentUser,
-                inviteCode: inviteCode || ''
-              }, '正在載入模擬帳號資料...');
-              return;
-            }
-    
-            // 【正式模式】正常執行 LINE LIFF 驗證
             await liff.init({ liffId: LIFF_ID });
+    
+            const postInitInvite = extractInviteCodeFromUrl();
+            if (postInitInvite) {
+              localStorage.setItem('pending_invite_code', postInitInvite);
+            }
+    
             if (!liff.isLoggedIn()) {
               liff.login();
               return;
@@ -1123,14 +1112,20 @@
               displayName: profile.displayName
             };
     
-            if (inviteCode && window.history && window.history.replaceState) {
+            const finalInviteCode = localStorage.getItem('pending_invite_code') || '';
+            if (finalInviteCode) {
+              localStorage.removeItem('pending_invite_code');
+            }
+    
+            // 清理網址列參數
+            if (window.history && window.history.replaceState) {
               window.history.replaceState({}, document.title, window.location.pathname);
             }
     
             document.getElementById('topControlBar').classList.remove('hidden');
             await callGasApi('bootstrap', {
               userProfile: currentUser,
-              inviteCode: inviteCode || ''
+              inviteCode: finalInviteCode
             }, '正在載入帳本資料...');
           } catch (err) {
             document.getElementById('loadingText').innerHTML =
