@@ -796,7 +796,7 @@
           <option value="">尚無帳本</option>
         </select>
       </div>
-      <button class="icon-btn primary-outline" onclick="openModal('createLedgerModal')">
+      <button class="icon-btn primary-outline" onclick="openCreateLedgerModal()">
         <i class="fa-solid fa-plus"></i> 建立
       </button>
       <button class="icon-btn" onclick="openModal('joinLedgerModal')">
@@ -1057,8 +1057,23 @@
       </div>
       <div class="form-group">
         <label class="form-label">帳本名稱</label>
-        <input type="text" id="newLedgerTitle" class="form-control" placeholder="例如：沖繩四天三夜、部門聚餐" maxlength="30" />
+        <input type="text" id="newLedgerTitle" class="form-control" placeholder="例如：11月生活費、沖繩四天三夜" maxlength="30" />
       </div>
+
+      <!-- 沿用目前預設帳本成員選項（僅在目前帳本有其他成員時顯示） -->
+      <div id="copyMembersSection" class="form-group hidden" style="background:#faf6f5; border:1px solid var(--border-color); border-radius:12px; padding:12px;">
+        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color:var(--text-main); cursor:pointer; margin:0;">
+          <input type="checkbox" id="copyMembersCheckbox" style="accent-color:var(--primary); width:17px; height:17px; margin:0;" onchange="onToggleCopyMembers()" />
+          <span>直接加入「<span id="copySourceLedgerName" style="color:var(--primary-dark);"></span>」的成員</span>
+        </label>
+        <div id="copyMembersListWrap" class="hidden" style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--border-color);">
+          <div style="font-size:12px; color:var(--text-sub); margin-bottom:6px;">
+            勾選要一併帶入新帳本的成員（將沿用原帳本暱稱）：
+          </div>
+          <div id="copyMembersGrid" class="split-grid"></div>
+        </div>
+      </div>
+
       <div class="modal-actions">
         <button type="button" class="btn-primary" onclick="submitCreateLedger()">
           <i class="fa-solid fa-plus"></i> 立即建立
@@ -1767,19 +1782,85 @@
       callGasApi('switchLedger', { userId: currentUser.userId, ledgerId: ledgerId }, '正在切換帳本...');
     }
 
+    function openCreateLedgerModal() {
+      document.getElementById('newLedgerTitle').value = '';
+      const copySection = document.getElementById('copyMembersSection');
+      const copyCheckbox = document.getElementById('copyMembersCheckbox');
+      const listWrap = document.getElementById('copyMembersListWrap');
+      const grid = document.getElementById('copyMembersGrid');
+
+      const data = appState && appState.activeLedgerData;
+      const otherMembers = data && data.members
+        ? data.members.filter(function (m) { return m.userId !== currentUser.userId; })
+        : [];
+
+      if (data && otherMembers.length > 0) {
+        copySection.classList.remove('hidden');
+        document.getElementById('copySourceLedgerName').textContent = data.ledger.title;
+        copyCheckbox.checked = false;
+        listWrap.classList.add('hidden');
+
+        grid.innerHTML = otherMembers.map(function (m) {
+          const guestBadge = m.isGuest ? '<span class="guest-badge">未綁定</span>' : '';
+          return '<label class="split-chip checked" onclick="onToggleCopyMemberChip(this)">' +
+            '<input type="checkbox" name="copyMemberUser" value="' + m.userId + '" checked />' +
+            '<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + escapeHtml(m.nickname) + '</span>' +
+            guestBadge +
+            '</label>';
+        }).join('');
+      } else {
+        copySection.classList.add('hidden');
+        copyCheckbox.checked = false;
+        listWrap.classList.add('hidden');
+        grid.innerHTML = '';
+      }
+
+      openModal('createLedgerModal');
+    }
+
+    function onToggleCopyMembers() {
+      const isChecked = document.getElementById('copyMembersCheckbox').checked;
+      const listWrap = document.getElementById('copyMembersListWrap');
+      if (isChecked) {
+        listWrap.classList.remove('hidden');
+      } else {
+        listWrap.classList.add('hidden');
+      }
+    }
+
+    function onToggleCopyMemberChip(labelEl) {
+      setTimeout(function () {
+        const cb = labelEl.querySelector('input[type="checkbox"]');
+        labelEl.classList.toggle('checked', cb.checked);
+      }, 0);
+    }
+
     function submitCreateLedger() {
       const title = document.getElementById('newLedgerTitle').value.trim();
       if (!title) {
         showToast('請輸入帳本名稱');
         return;
       }
+
+      const shouldCopy = document.getElementById('copyMembersCheckbox').checked;
+      let copyFromLedgerId = '';
+      let copyMemberIds = [];
+
+      if (shouldCopy && appState && appState.activeLedgerId) {
+        copyFromLedgerId = appState.activeLedgerId;
+        copyMemberIds = Array.from(document.querySelectorAll('input[name="copyMemberUser"]:checked'))
+          .map(function (cb) { return cb.value; });
+      }
+
       closeModal('createLedgerModal');
       document.getElementById('newLedgerTitle').value = '';
       callGasApi('createLedger', {
         userId: currentUser.userId,
         displayName: currentUser.displayName,
-        title: title
-      }, '正在建立帳本...');
+        title: title,
+        copyFromLedgerId: copyFromLedgerId,
+        copyMemberIds: copyMemberIds
+      }, shouldCopy ? '正在建立帳本並匯入成員...' : '正在建立帳本...');
     }
 
     function submitJoinLedger() {
