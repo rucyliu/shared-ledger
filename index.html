@@ -2143,10 +2143,9 @@
       document.body.removeChild(link);
       setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
 
-      // 針對 iOS 手機 LINE 內建瀏覽器可能阻擋 blob 下載的貼心提醒
       const isLineInApp = (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient());
       if (isLineInApp) {
-        showToast('已觸發 CSV 下載！若 iPhone LINE 內建視窗未自動儲存，請點右下角「⋮」改用 Safari 開啟後下載', 5000);
+        showToast('已觸發 CSV 下載！若 LINE 內建視窗未自動儲存，請改用其他瀏覽器開啟後下載', 5000);
       } else {
         showToast('已下載「' + fileName + '」');
       }
