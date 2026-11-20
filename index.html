@@ -51,9 +51,9 @@
     .top-bar {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       background: var(--bg-card);
-      padding: 10px 12px;
+      padding: 10px 10px;
       border-radius: var(--radius);
       box-shadow: var(--shadow);
       border: 1px solid var(--border-color);
@@ -72,8 +72,8 @@
       background: var(--bg-soft-pink);
       border: 1px solid #f2cfd5;
       border-radius: 10px;
-      padding: 8px 30px 8px 12px;
-      font-size: 15px;
+      padding: 8px 26px 8px 10px;
+      font-size: 14px;
       font-weight: 700;
       color: var(--text-main);
       text-overflow: ellipsis;
@@ -89,7 +89,7 @@
       font-size: 11px;
       color: var(--text-sub);
       position: absolute;
-      right: 11px;
+      right: 9px;
       top: 50%;
       transform: translateY(-50%);
       pointer-events: none;
@@ -100,14 +100,15 @@
       background: #fff;
       color: var(--text-main);
       border-radius: 10px;
-      padding: 7px 10px;
+      padding: 7px 9px;
       font-size: 12px;
       font-weight: 600;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
-      gap: 5px;
+      gap: 4px;
       white-space: nowrap;
+      flex-shrink: 0;
     }
 
     .icon-btn:active {
@@ -118,6 +119,43 @@
       border-color: var(--primary);
       color: var(--primary-dark);
       background: var(--bg-soft-pink);
+    }
+
+    /* 未加官方帳號好友頂部提醒橫幅 */
+    .friend-banner {
+      background: #fff3cd;
+      border: 1px solid #ffe69c;
+      color: #664d03;
+      border-radius: 12px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 12px;
+      box-shadow: var(--shadow);
+    }
+
+    .friend-banner-btn {
+      background: #06c755;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 7px 11px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      flex-shrink: 0;
+    }
+
+    .friend-banner-btn:active {
+      opacity: 0.9;
+      transform: scale(0.97);
     }
 
     .hero-card {
@@ -578,6 +616,115 @@
       border-color: #bfd7f2;
     }
 
+    /* FAQ 折疊式手風琴樣式 */
+    .faq-search-wrap {
+      position: relative;
+      margin-bottom: 12px;
+    }
+
+    .faq-search-wrap i {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-sub);
+      font-size: 13px;
+    }
+
+    .faq-search-input {
+      width: 100%;
+      padding: 9px 12px 9px 34px;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      font-size: 14px;
+      color: var(--text-main);
+      background: #faf6f5;
+    }
+
+    .faq-search-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: #fff;
+    }
+
+    .faq-cat-title {
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--primary-dark);
+      margin: 14px 0 6px 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .faq-cat-title:first-child {
+      margin-top: 0;
+    }
+
+    .faq-item {
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      background: #fff;
+      margin-bottom: 7px;
+      overflow: hidden;
+    }
+
+    .faq-item[open] {
+      border-color: #e2b8be;
+      background: #fffafa;
+    }
+
+    .faq-q {
+      list-style: none;
+      padding: 11px 12px;
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--text-main);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      line-height: 1.4;
+      user-select: none;
+    }
+
+    .faq-q::-webkit-details-marker {
+      display: none;
+    }
+
+    .faq-chevron {
+      color: var(--text-sub);
+      font-size: 11px;
+      transition: transform 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .faq-item[open] .faq-chevron {
+      transform: rotate(180deg);
+      color: var(--primary-dark);
+    }
+
+    .faq-a {
+      padding: 0 12px 12px 12px;
+      font-size: 13px;
+      color: var(--text-sub);
+      line-height: 1.6;
+      border-top: 1px dashed #f0e4e0;
+      padding-top: 9px;
+    }
+
+    .faq-code {
+      display: inline-block;
+      background: #f4ece9;
+      color: var(--text-main);
+      font-family: monospace;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 5px;
+    }
+
     .modal-backdrop {
       position: fixed;
       inset: 0;
@@ -789,7 +936,7 @@
   <div id="toastBox" class="toast"></div>
 
   <div class="app-container">
-    <!-- 頂部帳本切換與建立/加入列 -->
+    <!-- 頂部帳本切換與建立/加入/說明列 -->
     <div id="topControlBar" class="top-bar hidden">
       <div class="ledger-select-wrap">
         <select id="ledgerSelect" class="ledger-select" onchange="onSwitchLedger(this.value)">
@@ -802,6 +949,20 @@
       <button class="icon-btn" onclick="openModal('joinLedgerModal')">
         <i class="fa-solid fa-ticket"></i> 加入
       </button>
+      <button class="icon-btn" onclick="openFaqModal()" title="操作手冊與常見問題">
+        <i class="fa-regular fa-circle-question"></i> 說明
+      </button>
+    </div>
+
+    <!-- 未加官方帳號好友提醒橫幅 -->
+    <div id="addFriendBanner" class="friend-banner hidden">
+      <div style="line-height:1.45;">
+        <b><i class="fa-solid fa-bell"></i> 尚未加入官方帳號好友</b><br>
+        加入後才能收到結算推播與使用聊天室快速記帳
+      </div>
+      <button type="button" class="friend-banner-btn" onclick="openAddOfficialAccount()">
+        <i class="fa-brands fa-line"></i> 加好友
+      </button>
     </div>
 
     <!-- 空狀態（尚未建立或加入任何帳本） -->
@@ -811,8 +972,8 @@
       <p style="margin:0 0 20px 0; font-size:13px; color:var(--text-sub); line-height:1.5;">
         你可以建立一本新帳本並邀請朋友一起記帳，<br>或是輸入朋友分享的 6 碼邀請碼加入現有帳本。
       </p>
-      <div style="display:flex; gap:10px; justify-content:center;">
-        <button class="btn-primary" style="width:auto; padding:11px 18px;" onclick="openModal('createLedgerModal')">
+      <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+        <button class="btn-primary" style="width:auto; padding:11px 18px;" onclick="openCreateLedgerModal()">
           <i class="fa-solid fa-plus"></i> 建立新帳本
         </button>
         <button class="btn-secondary" onclick="openModal('joinLedgerModal')">
@@ -1048,7 +1209,7 @@
     </div>
   </div>
 
-  <!-- 2. 建立新帳本 Modal -->
+  <!-- 2. 建立新帳本 Modal（支援沿用目前預設帳本成員） -->
   <div id="createLedgerModal" class="modal-backdrop">
     <div class="modal-sheet">
       <div class="modal-header">
@@ -1060,7 +1221,6 @@
         <input type="text" id="newLedgerTitle" class="form-control" placeholder="例如：11月生活費、沖繩四天三夜" maxlength="30" />
       </div>
 
-      <!-- 沿用目前預設帳本成員選項（僅在目前帳本有其他成員時顯示） -->
       <div id="copyMembersSection" class="form-group hidden" style="background:#faf6f5; border:1px solid var(--border-color); border-radius:12px; padding:12px;">
         <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color:var(--text-main); cursor:pointer; margin:0;">
           <input type="checkbox" id="copyMembersCheckbox" style="accent-color:var(--primary); width:17px; height:17px; margin:0;" onchange="onToggleCopyMembers()" />
@@ -1311,12 +1471,188 @@
     </div>
   </div>
 
+  <!-- 13. 操作手冊與常見問題 (FAQ) Modal -->
+  <div id="faqModal" class="modal-backdrop">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h3><i class="fa-regular fa-circle-question" style="color:var(--primary);"></i> 操作手冊與常見問題</h3>
+        <button class="close-btn" onclick="closeModal('faqModal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="faq-search-wrap">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" id="faqSearchInput" class="faq-search-input" placeholder="搜尋關鍵字（例如：代管、編號、快速記帳、結算、刪除）" oninput="filterFaqItems()" />
+      </div>
+
+      <div id="faqEmptyNotice" class="hidden" style="text-align:center; padding:24px 0; color:var(--text-sub); font-size:13px;">
+        找不到符合的說明項目，請嘗試其他關鍵字。
+      </div>
+
+      <div id="faqListContainer">
+        <!-- 分類一 -->
+        <div class="faq-category-group">
+          <div class="faq-cat-title"><i class="fa-solid fa-compass"></i> 一、入門與帳號設定</div>
+
+          <details class="faq-item">
+            <summary class="faq-q">
+              <span>1. 如何建立新帳本或邀請朋友加入？</span>
+              <i class="fa-solid fa-chevron-down faq-chevron"></i>
+            </summary>
+            <div class="faq-a">
+              點擊頂部 <b>「建立」</b> 輸入帳本名稱即可開帳。帳本進行中時，所有成員都可以在主卡片下方看到 <b>6 碼邀請碼</b>，點擊 <b>「邀請朋友」</b> 即可複製專屬連結或透過 LINE 好友選單傳送；朋友點擊連結或輸入邀請碼即可加入。
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">
+              <span>2. 受邀加入時跳出「認領代管成員」該怎麼選？</span>
+              <i class="fa-solid fa-chevron-down faq-chevron"></i>
+            </summary>
+            <div class="faq-a">
+              若帳本建立者先前已幫你建立「未綁定 LINE」的代管名單，受邀加入時系統會先詢問身分：<br>
+              • <b>名單中有你</b>：點擊對應名字並二次確認後，原本幫你代記的墊付與均攤紀錄會自動合併至你的 LINE 帳號（合併後無法還原）。<br>
+              • <b>名單中沒有你或不確定</b>：請直接點選 <b>「我是新成員，直接加入」</b>。
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">
+              <span>3. 為什麼建議加入記帳本官方帳號好友？</span>
+              <i class="fa-solid fa-chevron-down faq-chevron"></i>
+            </summary>
+            <div class="faq-a">
+              未加好友仍可正常開啟網頁記帳；但加入官方帳號好友後，才能在<b>正式結算</b>或<b>被加入新帳本</b>時收到 LINE 推播通知，也能直接在 LINE 聊天室輸入文字快速記帳與查詢個人明細。
+            </div>
+          </details>
+        </div>
+
+        <!-- 分類二 -->
+        <div class="faq-category-group">
+          <div class="faq-cat-title"><i class="fa-solid fa-pen-to-square"></i> 二、日常記帳與成員管理</div>
+
+          <details class="faq-item">
+            <summary class="faq-q">
+              <span>4. 朋友沒用 LINE 或不想自己操作記帳怎麼辦？</span>
+              <i class="fa-solid fa-chevron-down faq-chevron"></i>
+            </summary>
+            <div class="faq-a">
+              帳本創建者可點擊主卡片下方的 <b>「代管成員」</b>，輸入暱稱（例如：阿公、不記帳的小美）建立 <span class="guest-badge" style="margin-left:0;">未綁定</span> 成員。代管成員一樣可作為墊付人或均攤對象參與結算，日後對方若加入帳本也能隨時認領合併。
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">
+              <span>5. 記錯金額或分攤名單可以修改嗎？</span>
+              <i class="fa-solid fa-chevron-down faq-chevron"></i>
+            </summary>
+            <div class="faq-a">
+              只要帳本狀態為 <b>「進行中」</b>，所有成員皆可至 <b>「帳務明細」</b> 分頁點擊項目右側的 <b>「編輯」</b> 修改名稱、金額、墊付人或均攤人，也可刪除該筆項目。一旦創建者執行「正式結算」後，帳本即鎖定為唯讀。
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">
+              <span>6. 如何修改成員在帳本內的顯示暱稱？</span>
+              <i class="fa-solid fa-chevron-down faq-chevron"></i>
+            </summary>
+            <div class="faq-a">
+              點擊主卡片上「我的暱稱」旁的 <b>「改名」</b>，即可設定專屬於目前帳本的顯示名稱；<b>帳本創建者</b>則可在 <b>「結算總覽」</b> 的成員統計表中，點擊任一位成員（包含代管成員）旁的鉛筆圖示協助修改暱稱。
+            </div>
+          </details>
+        </div>
+
+        <!-- 分類三 -->
+        <div class="faq-category-group">
+          <div class="faq-cat-title"><i class="fa-brands fa-line"></i> 三、LINE 聊天室快速記帳</div>
+
+          <details class="faq-item">
+            <summary class="faq-q">
+              <span>7. 怎麼在 LINE 聊天室直接打字快速記帳？</span>
+              <i class="fa-solid fa-chevron-down faq-chevron"></i>
+            </summary>
+            <div class="faq-a">
+              在官方帳號聊天室直接輸入 <span class="faq-code">項目 金額</span>（例如：<span class="faq-code">晚餐 600</span>）。系統不會直接寫入，而是先回傳 <b>「草稿確認卡」</b> 讓你核對目標帳本與金額，按下 <b>「✅ 確認入帳」</b> 才會正式儲存。
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">
+              <span>8. 聊天室記帳如何指定墊付與均攤？成員編號去哪看？</span>
+              <i class="fa-solid fa-chevron-down faq-chevron"></i>
+            </summary>
+            <div class="faq-a">
+              在金額後方加上 <span class="faq-code">@墊付編號</span> 與 <span class="faq-code">/均攤編號</span>（例如：<span class="faq-code">晚餐 600 @3 /1 2</span>）：<br>
+              • 省略 <span class="faq-code">@</span> 預設由你墊付；省略 <span class="faq-code">/</span> 預設全員均攤。<br>
+              • 點擊聊天室快捷列的 <b>「快速記帳說明」</b>（或輸入 <span class="faq-code">記帳說明</span>）即可查看目前預設帳本與每位成員的對應編號。<br>
+              • 支援<b>換行一次輸入多筆花費</b>（單次最多 15 筆）。
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">
+              <span>9. 電腦版 LINE 看不到下方圖文選單怎麼辦？</span>
+              <i class="fa-solid fa-chevron-down faq-chevron"></i>
+            </summary>
+            <div class="faq-a">
+              LINE 電腦版原生不支援顯示下方圖文選單，只要在聊天室輸入 <span class="faq-code">選單</span> 或 <span class="faq-code">?</span>，機器人就會回傳功能按鈕卡片並在輸入框上方重新喚出快捷按鈕列。
+            </div>
+          </details>
+        </div>
+
+        <!-- 分類四 -->
+        <div class="faq-category-group">
+          <div class="faq-cat-title"><i class="fa-solid fa-calculator"></i> 四、結算、報表與週期管理</div>
+
+          <details class="faq-item">
+            <summary class="faq-q">
+              <span>10. 「最小轉帳結清路徑」是怎麼計算的？</span>
+              <i class="fa-solid fa-chevron-down faq-chevron"></i>
+            </summary>
+            <div class="faq-a">
+              系統會統計每位成員「已預付」減去「應均攤」後的淨額（正數為應收、負數為應付），再透過演算法自動配對付款人與收款人，以<b>最少的轉帳次數</b>讓全員帳目歸零結清。
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">
+              <span>11. 如何正式結算鎖定並保存帳務報表？</span>
+              <i class="fa-solid fa-chevron-down faq-chevron"></i>
+            </summary>
+            <div class="faq-a">
+              • <b>正式結算</b>：帳本創建者可在 <b>「結算總覽」</b> 點擊「正式結算並鎖定帳本」，鎖定後全員變為唯讀並自動收到 LINE 結算通知。<br>
+              • <b>保存與分享</b>：所有成員隨時都可在「結算總覽」點擊 <b>「複製文字」</b> 貼到 LINE 群組，或點 <b>「匯出 CSV」</b> 下載 Excel 檔案保存。
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">
+              <span>12. 每月固定班底開新帳本要重邀嗎？如何刪除帳本？</span>
+              <i class="fa-solid fa-chevron-down faq-chevron"></i>
+            </summary>
+            <div class="faq-a">
+              • <b>沿用固定成員</b>：點擊頂部「建立」新帳本時，勾選 <b>「直接加入目前帳本的成員」</b>，即可一鍵帶入原成員（沿用暱稱）並自動推播通知大家。<br>
+              • <b>刪除帳本</b>：僅創建者可至 <b>「結算總覽」</b> 最下方點擊「刪除此記帳本」，完整輸入帳本名稱確認後即可永久清除所有資料。
+            </div>
+          </details>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-primary" onclick="closeModal('faqModal')">我知道了</button>
+      </div>
+    </div>
+  </div>
+
   <script>
+    // =========================================================================
+    // 請填入你的正式 LINE LIFF ID、GAS 部署網址 (/exec 結尾) 與官方帳號加好友網址
+    // =========================================================================
     const LIFF_ID = "2012687270-krKUpomw";
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyK9l3YGWPuKE9uGLM2TlxwQy0C1nQxQCii79esd2uYFvyt5imgzenyLKWiBaws_HAw/exec";
+    const OA_ADD_FRIEND_URL = "https://line.me/R/ti/p/@184ibjmd";
 
-    // 測試完成正式開放給朋友使用前，請將此改為 false
-    const ENABLE_MOCK_MODE = true;
+    // 正式環境已關閉模擬測試模式
+    const ENABLE_MOCK_MODE = false;
     let isMockMode = false;
 
     let currentUser = null;
@@ -1361,7 +1697,7 @@
     }
 
     // =========================================================================
-    // 1. 初始化
+    // 1. 初始化 LINE LIFF 與官方帳號好友狀態偵測
     // =========================================================================
     (async function initLiffApp() {
       try {
@@ -1371,7 +1707,7 @@
         const incomingInvite = extractInviteCodeFromUrl();
         const incomingPrefill = extractPrefillFromUrl();
 
-        // 【分支 A：模擬測試模式】
+        // 【分支 A：模擬測試模式（正式上線時已透過 ENABLE_MOCK_MODE = false 停用）】
         if (ENABLE_MOCK_MODE && mockUserId) {
           isMockMode = true;
           currentUser = {
@@ -1432,6 +1768,8 @@
           displayName: profile.displayName
         };
 
+        checkOfficialAccountFriendship();
+
         const finalInviteCode = localStorage.getItem('pending_invite_code') || '';
         if (finalInviteCode) {
           localStorage.removeItem('pending_invite_code');
@@ -1461,6 +1799,35 @@
           '</div>';
       }
     })();
+
+    async function checkOfficialAccountFriendship() {
+      if (isMockMode || typeof liff === 'undefined' || !liff.isLoggedIn || !liff.isLoggedIn()) return;
+      try {
+        const friendship = await liff.getFriendship();
+        const bannerEl = document.getElementById('addFriendBanner');
+        if (friendship && friendship.friendFlag === false) {
+          bannerEl.classList.remove('hidden');
+        } else {
+          bannerEl.classList.add('hidden');
+        }
+      } catch (err) {
+        console.warn('無法取得官方帳號好友狀態:', err.message);
+      }
+    }
+
+    function openAddOfficialAccount() {
+      if (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient()) {
+        liff.openWindow({ url: OA_ADD_FRIEND_URL, external: false });
+      } else {
+        window.open(OA_ADD_FRIEND_URL, '_blank');
+      }
+    }
+
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible' && currentUser) {
+        checkOfficialAccountFriendship();
+      }
+    });
 
     // =========================================================================
     // 2. 透過 fetch 呼叫 GAS 純 JSON API
@@ -1782,6 +2149,53 @@
       callGasApi('switchLedger', { userId: currentUser.userId, ledgerId: ledgerId }, '正在切換帳本...');
     }
 
+    // --- 操作手冊與 FAQ 彈窗控制與關鍵字過濾 ---
+    function openFaqModal() {
+      const searchInput = document.getElementById('faqSearchInput');
+      searchInput.value = '';
+      filterFaqItems();
+      openModal('faqModal');
+    }
+
+    function filterFaqItems() {
+      const keyword = document.getElementById('faqSearchInput').value.trim().toLowerCase();
+      const groups = document.querySelectorAll('.faq-category-group');
+      let totalVisible = 0;
+
+      groups.forEach(function (group) {
+        const items = group.querySelectorAll('.faq-item');
+        let groupVisible = 0;
+
+        items.forEach(function (item) {
+          const text = item.textContent.toLowerCase();
+          if (!keyword || text.indexOf(keyword) !== -1) {
+            item.classList.remove('hidden');
+            if (keyword) item.setAttribute('open', '');
+            else item.removeAttribute('open');
+            groupVisible++;
+            totalVisible++;
+          } else {
+            item.classList.add('hidden');
+            item.removeAttribute('open');
+          }
+        });
+
+        if (groupVisible > 0) {
+          group.classList.remove('hidden');
+        } else {
+          group.classList.add('hidden');
+        }
+      });
+
+      const emptyNotice = document.getElementById('faqEmptyNotice');
+      if (totalVisible === 0) {
+        emptyNotice.classList.remove('hidden');
+      } else {
+        emptyNotice.classList.add('hidden');
+      }
+    }
+
+    // --- 建立新帳本（含沿用目前預設帳本成員） ---
     function openCreateLedgerModal() {
       document.getElementById('newLedgerTitle').value = '';
       const copySection = document.getElementById('copyMembersSection');
@@ -1975,7 +2389,6 @@
       }, '正在更新帳本名稱...');
     }
 
-    // --- 永久刪除記帳本（名稱核對防呆） ---
     function openDeleteLedgerModal() {
       const data = appState && appState.activeLedgerData;
       if (!data || !data.permissions.canDeleteLedger) return;
@@ -2083,6 +2496,7 @@
       }, '正在檢查並移除成員...');
     }
 
+    // --- 複製純文字結算報表 ---
     async function copyTextSettlementReport() {
       const data = appState && appState.activeLedgerData;
       if (!data) return;
@@ -2129,6 +2543,7 @@
       }
     }
 
+    // --- 匯出 CSV 明細報表（含 UTF-8 BOM 防 Excel 亂碼） ---
     function escapeCsvCell(val) {
       const str = String(val === null || val === undefined ? '' : val);
       if (/[",\r\n]/.test(str)) {
@@ -2147,7 +2562,6 @@
         rows.push(cols.map(escapeCsvCell).join(','));
       };
 
-      // 1. 帳本基本資訊
       addRow(['【帳本結算報表】']);
       addRow(['帳本名稱', l.title]);
       addRow(['帳本狀態', l.status === 'SETTLED' ? '已正式結算鎖定' : '進行中（試算）']);
@@ -2157,7 +2571,6 @@
       }
       rows.push('');
 
-      // 2. 成員墊付與應付統計
       addRow(['【一、成員墊付與結算統計】']);
       addRow(['編號', '成員暱稱', '帳號狀態', '已預先支付', '均攤應付總額', '結算淨額（正數應收／負數應付）']);
       (data.memberSummaries || []).forEach(function (m, idx) {
@@ -2172,7 +2585,6 @@
       });
       rows.push('');
 
-      // 3. 最小轉帳結清路徑
       addRow(['【二、最小轉帳結清路徑】']);
       addRow(['序號', '付款人', '收款人', '應轉帳金額']);
       if (!data.transfers || data.transfers.length === 0) {
@@ -2184,7 +2596,6 @@
       }
       rows.push('');
 
-      // 4. 所有帳務明細（依時間由舊到新排序）
       addRow(['【三、所有帳務明細】']);
       addRow(['序號', '建立時間', '項目名稱', '支付金額', '預先支付人', '均攤人數', '每人平均分攤', '均攤成員名單']);
       const chronologicalExpenses = (data.expenses || []).slice().reverse();
@@ -2207,7 +2618,6 @@
         });
       }
 
-      // 加上 UTF-8 BOM (\uFEFF)，確保 Excel 開啟繁體中文不會亂碼
       const csvContent = '\uFEFF' + rows.join('\r\n');
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
@@ -2226,7 +2636,7 @@
 
       const isLineInApp = (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient());
       if (isLineInApp) {
-        showToast('已觸發 CSV 下載！若 LINE 內建視窗未自動儲存，請改用其他瀏覽器開啟後下載', 5000);
+        showToast('已觸發 CSV 下載！若 iPhone LINE 內建視窗未自動儲存，請點右下角「⋮」改用 Safari 開啟後下載', 5000);
       } else {
         showToast('已下載「' + fileName + '」');
       }
@@ -2433,7 +2843,7 @@
     }
 
     // =========================================================================
-    // 5. UI 輔助工具
+    // 5. UI 輔助工具（含點擊遮罩與 Escape 鍵關閉彈窗）
     // =========================================================================
     function openModal(id) {
       document.getElementById(id).classList.add('open');
@@ -2442,6 +2852,22 @@
     function closeModal(id) {
       document.getElementById(id).classList.remove('open');
     }
+
+    document.querySelectorAll('.modal-backdrop').forEach(function (backdrop) {
+      backdrop.addEventListener('click', function (e) {
+        if (e.target === backdrop) {
+          backdrop.classList.remove('open');
+        }
+      });
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-backdrop.open').forEach(function (el) {
+          el.classList.remove('open');
+        });
+      }
+    });
 
     function showLoading(text) {
       document.getElementById('loadingText').textContent = text || '載入中...';
