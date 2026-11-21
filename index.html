@@ -945,6 +945,123 @@
     .hidden {
       display: none !important;
     }
+
+    /* 待入帳提醒橫幅 */
+    .recurring-alert-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      background: #fff8eb;
+      border: 1px solid #f7d99c;
+      color: #7a4f01;
+      border-radius: 12px;
+      padding: 9px 12px;
+      margin-bottom: 12px;
+      font-size: 12.5px;
+      cursor: pointer;
+    }
+
+    .recurring-alert-bar:active {
+      background: #fef0d3;
+    }
+
+    /* 新增帳務彈窗：快速帶入定期項目列 */
+    .recurring-quick-box {
+      background: #faf6f5;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 10px 11px;
+      margin-bottom: 14px;
+    }
+
+    .recurring-quick-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-bottom: 8px;
+    }
+
+    .recurring-chips-scroll {
+      display: flex;
+      gap: 7px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .recurring-chip {
+      flex-shrink: 0;
+      border: 1.5px solid var(--border-color);
+      background: #fff;
+      border-radius: 10px;
+      padding: 6px 10px;
+      font-size: 12px;
+      color: var(--text-main);
+      cursor: pointer;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+      text-align: left;
+      transition: all 0.15s;
+    }
+
+    .recurring-chip.pending {
+      border-color: #f3c677;
+      background: #fffcf5;
+    }
+
+    .recurring-chip.logged {
+      opacity: 0.72;
+      background: #f7f4f3;
+    }
+
+    .recurring-chip.selected {
+      border-color: var(--primary);
+      background: var(--bg-soft-pink);
+      opacity: 1;
+    }
+
+    .tpl-status-pill {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 99px;
+      vertical-align: middle;
+    }
+
+    .tpl-status-pill.pending {
+      background: #fef3c7;
+      color: #b45309;
+    }
+
+    .tpl-status-pill.logged {
+      background: var(--green-bg);
+      color: var(--green);
+    }
+
+    /* 管理視窗內的定期範本卡片 */
+    .tpl-card {
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 11px 12px;
+      background: #fff;
+      margin-bottom: 9px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .tpl-card.pending {
+      border-color: #f3c677;
+      background: #fffdf9;
+    }
   </style>
 </head>
 <body>
@@ -1055,8 +1172,18 @@
         </button>
       </div>
 
-      <!-- 分頁 1：帳務明細 -->
+     <!-- 分頁 1：帳務明細 -->
       <div id="tab-expenses" class="tab-panel">
+        <div id="pendingRecurringBanner" class="recurring-alert-bar hidden" onclick="openExpenseModal()">
+          <div>
+            <i class="fa-solid fa-clock" style="color:#d97706;"></i>
+            <span id="pendingRecurringText">你有定期支出尚未加入本帳本</span>
+          </div>
+          <span style="font-weight:700; color:#b45309; white-space:nowrap;">
+            去帶入 <i class="fa-solid fa-chevron-right"></i>
+          </span>
+        </div>
+
         <div class="card">
           <div class="section-title">
             <span>所有帳務項目 (<span id="expenseCount">0</span>)</span>
@@ -1073,6 +1200,9 @@
         <div class="card">
           <div class="section-title">
             <span><i class="fa-solid fa-wallet" style="color:var(--primary);"></i> 個人收支統計</span>
+            <button type="button" class="icon-btn primary-outline" style="padding:4px 9px; font-size:12px;" onclick="openRecurringManageModal()">
+              <i class="fa-solid fa-repeat"></i> 定期支出設定
+            </button>
           </div>
           <div class="personal-grid">
             <div class="p-box">
@@ -1208,6 +1338,17 @@
       </div>
       <input type="hidden" id="editExpenseId" />
 
+      <!-- 快速帶入個人定期支出項目列 -->
+      <div id="quickRecurringSection" class="recurring-quick-box">
+        <div class="recurring-quick-header">
+          <span><i class="fa-solid fa-bolt" style="color:#d97706;"></i> 快速帶入我的定期支出</span>
+          <button type="button" class="icon-btn" style="padding:2px 8px; font-size:11px;" onclick="openRecurringManageModal(true)">
+            <i class="fa-solid fa-gear"></i> 管理範本
+          </button>
+        </div>
+        <div id="quickRecurringChips" class="recurring-chips-scroll"></div>
+      </div>
+
       <div class="form-group">
         <label class="form-label">項目名稱</label>
         <input type="text" id="expItemName" class="form-control" placeholder="例如：第一天晚餐、租車費、門票" maxlength="40" />
@@ -1232,6 +1373,18 @@
         </div>
         <div id="splitMembersGrid" class="split-grid"></div>
         <div id="splitPreviewBox" class="split-preview">請勾選均攤成員</div>
+      </div>
+
+      <!-- 順手存為個人定期支出範本 -->
+      <div style="background:#faf6f5; border:1px solid var(--border-color); border-radius:12px; padding:10px 12px; margin-bottom:12px;">
+        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color:var(--text-main); cursor:pointer; margin:0;">
+          <input type="checkbox" id="saveAsRecurringCheckbox" style="accent-color:var(--primary); width:16px; height:16px; margin:0;" onchange="onToggleSaveAsRecurring()" />
+          <span><i class="fa-solid fa-repeat" style="color:var(--primary);"></i> 同時儲存為我的定期支出範本</span>
+        </label>
+        <div id="recurringBillingDayWrap" class="hidden" style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--border-color); display:flex; align-items:center; justify-content:space-between; gap:8px;">
+          <span style="font-size:12px; color:var(--text-sub);">每月扣款日（選填，1～31）：</span>
+          <input type="number" id="saveAsRecurringDay" class="form-control" style="width:96px; padding:6px 8px; font-size:13px;" min="1" max="31" placeholder="例如 5" />
+        </div>
       </div>
 
       <div class="modal-actions">
@@ -1706,6 +1859,93 @@
     </div>
   </div>
 
+  <!-- 15. 個人定期支出管理 Modal -->
+  <div id="recurringManageModal" class="modal-backdrop">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-repeat" style="color:var(--primary);"></i> 我的定期支出項目</h3>
+        <button class="close-btn" onclick="closeModal('recurringManageModal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <p style="font-size:12.5px; color:var(--text-sub); margin-top:0; line-height:1.5;">
+        設定個人固定開銷（如影音訂閱、會員費），跨所有帳本皆可快速帶入，並自動比對目前帳本是否已入帳。
+      </p>
+
+      <div id="recurringTemplateList" style="margin-bottom:14px;"></div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-primary" onclick="openRecurringEditModal()">
+          <i class="fa-solid fa-plus"></i> 新增定期支出範本
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 16. 新增 / 編輯定期支出範本 Modal -->
+  <div id="recurringEditModal" class="modal-backdrop">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h3 id="recurringEditTitle">新增定期支出範本</h3>
+        <button class="close-btn" onclick="backToRecurringManage()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <input type="hidden" id="editRecurringId" />
+
+      <div class="form-group">
+        <label class="form-label">項目名稱</label>
+        <input type="text" id="tplItemName" class="form-control" placeholder="例如：Netflix、YouTube Premium、Costco會費" maxlength="40" />
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div class="form-group">
+          <label class="form-label">預設金額（可填 0）</label>
+          <input type="number" id="tplAmount" class="form-control" inputmode="decimal" placeholder="填 0 代表浮動金額" min="0" step="any" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">每月扣款日（選填）</label>
+          <input type="number" id="tplBillingDay" class="form-control" inputmode="numeric" placeholder="1～31 號" min="1" max="31" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <div class="form-label">
+          <span>預設均攤成員（跨帳本自動對應）</span>
+          <button type="button" class="icon-btn" style="padding:3px 8px; font-size:12px;" onclick="toggleSelectAllTplSplit()">
+            全選 / 取消
+          </button>
+        </div>
+        <div id="tplSplitMembersGrid" class="split-grid"></div>
+        <div style="font-size:11.5px; color:var(--text-sub); margin-top:6px; line-height:1.45;">
+          系統會記住勾選的 LINE 成員；每月沿用成員建立新帳本時，帶入此範本將自動勾選相同分攤對象。
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" style="flex:1;" onclick="backToRecurringManage()">返回</button>
+        <button type="button" class="btn-primary" style="flex:1;" onclick="submitRecurringTemplateForm()">
+          <i class="fa-solid fa-check"></i> 儲存範本
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 17. 確認刪除定期支出範本 Modal -->
+  <div id="confirmDeleteRecurringModal" class="modal-backdrop">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h3 class="text-red"><i class="fa-solid fa-trash-can"></i> 刪除定期支出範本</h3>
+        <button class="close-btn" onclick="backToRecurringManageFromDelete()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <input type="hidden" id="deleteRecurringTargetId" />
+      <p style="font-size:14px; line-height:1.6; color:var(--text-main); margin-top:0;">
+        確定要刪除定期支出範本「<b id="deleteRecurringTargetName"></b>」嗎？<br>
+        <span style="font-size:12px; color:var(--text-sub);">（不會影響已經寫入各帳本的歷史帳務紀錄）</span>
+      </p>
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" style="flex:1;" onclick="backToRecurringManageFromDelete()">取消</button>
+        <button type="button" class="btn-danger" style="flex:1;" onclick="executeDeleteRecurringTemplate()">確認刪除</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // =========================================================================
     // 請填入你的正式 LINE LIFF ID、GAS 部署網址 (/exec 結尾) 與官方帳號加好友網址
@@ -1723,6 +1963,7 @@
     let pendingInviteChoiceData = null;
     let selectedClaimGuest = null;
     let pendingPrefillDraft = null;
+    let reopenRecurringManage = false;
 
     function getCombinedSearchParams() {
       const urlParams = new URLSearchParams(window.location.search);
@@ -1916,6 +2157,10 @@
 
         hideLoading();
         renderAppState(json.data);
+        if (reopenRecurringManage) {
+          reopenRecurringManage = false;
+          openRecurringManageModal();
+        }
       } catch (err) {
         hideLoading();
         showToast(err.message || '網路連線發生錯誤，請稍後再試', 4500);
@@ -2037,6 +2282,19 @@
       renderExpensesTab(data);
       renderPersonalTab(data);
       renderSettlementTab(data);
+
+      // 渲染分頁 1 頂部的「定期支出待入帳提醒條」
+      const pendingList = getEnrichedRecurringTemplates().filter(function (t) { return !t.isLoggedInActive; });
+      const alertBar = document.getElementById('pendingRecurringBanner');
+      if (perm.canEdit && pendingList.length > 0) {
+        const previewNames = pendingList.slice(0, 2).map(function (t) { return t.item_name; }).join('、');
+        const moreSuffix = pendingList.length > 2 ? ' 等 ' + pendingList.length + ' 筆' : '（共 ' + pendingList.length + ' 筆）';
+        document.getElementById('pendingRecurringText').innerHTML =
+          '定期支出待入帳：<b>' + escapeHtml(previewNames) + '</b>' + moreSuffix;
+        alertBar.classList.remove('hidden');
+      } else {
+        alertBar.classList.add('hidden');
+      }
 
       if (pendingPrefillDraft) {
         const draftToApply = pendingPrefillDraft;
@@ -2764,6 +3022,14 @@
       const data = appState.activeLedgerData;
       if (!data || !data.permissions.canEdit) return;
 
+      // 渲染快速帶入定期支出膠囊列
+      renderQuickRecurringChips();
+
+      // 重置「同時儲存為定期範本」勾選狀態
+      document.getElementById('saveAsRecurringCheckbox').checked = false;
+      document.getElementById('recurringBillingDayWrap').classList.add('hidden');
+      document.getElementById('saveAsRecurringDay').value = '';
+
       const members = data.members || [];
       const memberIdSet = new Set(members.map(m => m.userId));
       const payerSelect = document.getElementById('expPayerSelect');
@@ -2801,18 +3067,7 @@
         const validPrefillSplits = prefillData.splitUsers.filter(uid => memberIdSet.has(uid));
         if (validPrefillSplits.length > 0) selectedSplitIds = validPrefillSplits;
       }
-      const selectedSplitSet = new Set(selectedSplitIds);
-
-      const grid = document.getElementById('splitMembersGrid');
-      grid.innerHTML = members.map(function (m) {
-        const isChecked = selectedSplitSet.has(m.userId);
-        const guestBadge = m.isGuest ? '<span class="guest-badge">未綁定</span>' : '';
-        return '<label class="split-chip ' + (isChecked ? 'checked' : '') + '" onclick="onToggleSplitChip(this)">' +
-          '<input type="checkbox" name="splitUser" value="' + m.userId + '" ' + (isChecked ? 'checked' : '') + ' onchange="updateSplitPreview()" />' +
-          '<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + escapeHtml(m.nickname) + '</span>' +
-          guestBadge +
-          '</label>';
-      }).join('');
+      setExpenseSplitSelection(selectedSplitIds);
 
       const delBtn = document.getElementById('btnDeleteExpense');
       if (targetExpense) {
@@ -2823,6 +3078,25 @@
 
       updateSplitPreview();
       openModal('expenseModal');
+    }
+
+    function setExpenseSplitSelection(selectedIds) {
+      const data = appState && appState.activeLedgerData;
+      if (!data) return;
+      const members = data.members || [];
+      const selectedSplitSet = new Set(selectedIds);
+      const grid = document.getElementById('splitMembersGrid');
+
+      grid.innerHTML = members.map(function (m) {
+        const isChecked = selectedSplitSet.has(m.userId);
+        const guestBadge = m.isGuest ? '<span class="guest-badge">未綁定</span>' : '';
+        return '<label class="split-chip ' + (isChecked ? 'checked' : '') + '" onclick="onToggleSplitChip(this)">' +
+          '<input type="checkbox" name="splitUser" value="' + m.userId + '" ' + (isChecked ? 'checked' : '') + ' onchange="updateSplitPreview()" />' +
+          '<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + escapeHtml(m.nickname) + '</span>' +
+          guestBadge +
+          '</label>';
+      }).join('');
+      updateSplitPreview();
     }
 
     function onToggleSplitChip(labelEl) {
@@ -2866,6 +3140,9 @@
       const splitUsers = Array.from(document.querySelectorAll('input[name="splitUser"]:checked'))
         .map(function (cb) { return cb.value; });
 
+      const saveAsRecurring = document.getElementById('saveAsRecurringCheckbox').checked;
+      const billingDay = document.getElementById('saveAsRecurringDay').value;
+
       if (!itemName) {
         showToast('請輸入項目名稱');
         return;
@@ -2888,9 +3165,300 @@
           item_name: itemName,
           amount: amount,
           payer_id: payerId,
-          split_users: splitUsers
+          split_users: splitUsers,
+          save_as_recurring: saveAsRecurring,
+          billing_day: billingDay
         }
       }, expenseId ? '正在更新帳務...' : '正在儲存帳務...');
+    }
+
+    // =========================================================================
+    // 4.5 個人定期支出項目管理與快速帶入邏輯
+    // =========================================================================
+    function getEnrichedRecurringTemplates() {
+      const templates = (appState && appState.recurringTemplates) || [];
+      const data = appState && appState.activeLedgerData;
+      const loggedNameSet = new Set(
+        ((data && data.expenses) || []).map(function (e) {
+          return String(e.item_name || '').trim().toLowerCase();
+        })
+      );
+
+      const enriched = templates.map(function (tpl) {
+        const isLogged = loggedNameSet.has(String(tpl.item_name || '').trim().toLowerCase());
+        return Object.assign({}, tpl, { isLoggedInActive: isLogged });
+      });
+
+      // 待入帳排前面，再依每月扣款日由小到大排序
+      enriched.sort(function (a, b) {
+        if (a.isLoggedInActive !== b.isLoggedInActive) {
+          return a.isLoggedInActive ? 1 : -1;
+        }
+        const dayA = a.billing_day > 0 ? a.billing_day : 99;
+        const dayB = b.billing_day > 0 ? b.billing_day : 99;
+        return dayA - dayB;
+      });
+
+      return enriched;
+    }
+
+    function renderQuickRecurringChips() {
+      const container = document.getElementById('quickRecurringChips');
+      const list = getEnrichedRecurringTemplates();
+
+      if (list.length === 0) {
+        container.innerHTML =
+          '<div style="font-size:12px; color:var(--text-sub); padding:4px 2px;">' +
+          '尚未設定定期支出，可勾選下方「同時儲存為範本」或點右上角「管理範本」新增。' +
+          '</div>';
+        return;
+      }
+
+      container.innerHTML = list.map(function (tpl) {
+        const statusClass = tpl.isLoggedInActive ? 'logged' : 'pending';
+        const statusBadge = tpl.isLoggedInActive
+          ? '<span class="tpl-status-pill logged">已記</span>'
+          : '<span class="tpl-status-pill pending">待入帳</span>';
+        const dayText = tpl.billing_day > 0 ? '每月' + tpl.billing_day + '號・' : '';
+        const amtText = tpl.amount > 0 ? '$' + Number(tpl.amount).toLocaleString() : '浮動金額';
+
+        return '<button type="button" class="recurring-chip ' + statusClass + '" data-tpl-id="' + tpl.template_id + '" onclick="applyRecurringTemplateToExpense(\'' + tpl.template_id + '\')">' +
+          '<div style="font-weight:700; display:flex; align-items:center; gap:5px;">' +
+          '<span>' + escapeHtml(tpl.item_name) + '</span>' + statusBadge +
+          '</div>' +
+          '<div style="font-size:11px; color:var(--text-sub);">' + dayText + amtText + '</div>' +
+          '</button>';
+      }).join('');
+    }
+
+    function applyRecurringTemplateToExpense(templateId) {
+      const templates = (appState && appState.recurringTemplates) || [];
+      const tpl = templates.find(function (t) { return t.template_id === templateId; });
+      const data = appState && appState.activeLedgerData;
+      if (!tpl || !data) return;
+
+      document.querySelectorAll('.recurring-chip').forEach(function (el) {
+        el.classList.toggle('selected', el.dataset.tplId === templateId);
+      });
+
+      document.getElementById('expItemName').value = tpl.item_name;
+      document.getElementById('expPayerSelect').value = currentUser.userId;
+
+      // 智慧對應記憶的均攤成員（若在目前帳本找不到吻合對象，則安全退回全員均攤）
+      const ledgerMemberIds = (data.members || []).map(function (m) { return m.userId; });
+      const ledgerMemberSet = new Set(ledgerMemberIds);
+      const matchedSplits = (tpl.split_users || []).filter(function (uid) { return ledgerMemberSet.has(uid); });
+      setExpenseSplitSelection(matchedSplits.length > 0 ? matchedSplits : ledgerMemberIds);
+
+      const amtInput = document.getElementById('expAmount');
+      if (tpl.amount > 0) {
+        amtInput.value = tpl.amount;
+        updateSplitPreview();
+        showToast('已帶入「' + tpl.item_name + '」');
+      } else {
+        amtInput.value = '';
+        updateSplitPreview();
+        amtInput.focus();
+        showToast('已帶入「' + tpl.item_name + '」，請輸入本次金額');
+      }
+    }
+
+    function onToggleSaveAsRecurring() {
+      const checked = document.getElementById('saveAsRecurringCheckbox').checked;
+      const wrap = document.getElementById('recurringBillingDayWrap');
+      if (checked) {
+        wrap.classList.remove('hidden');
+      } else {
+        wrap.classList.add('hidden');
+      }
+    }
+
+    function openRecurringManageModal(fromExpenseModal) {
+      if (fromExpenseModal) {
+        closeModal('expenseModal');
+      }
+
+      const list = getEnrichedRecurringTemplates();
+      const container = document.getElementById('recurringTemplateList');
+      const data = appState && appState.activeLedgerData;
+      const canQuickUse = Boolean(data && data.permissions && data.permissions.canEdit);
+
+      const memberMap = {};
+      ((data && data.members) || []).forEach(function (m) {
+        memberMap[m.userId] = m.nickname;
+      });
+
+      if (list.length === 0) {
+        container.innerHTML =
+          '<div style="text-align:center; padding:26px 12px; background:#faf6f5; border:1px dashed var(--border-color); border-radius:12px; color:var(--text-sub); font-size:13px; line-height:1.5;">' +
+          '目前尚未建立任何定期支出範本，<br>點擊下方按鈕新增你的固定開銷項目吧！' +
+          '</div>';
+      } else {
+        container.innerHTML = list.map(function (tpl) {
+          const statusHtml = data
+            ? (tpl.isLoggedInActive
+                ? '<span class="tpl-status-pill logged" style="margin-left:5px;">本帳本已記</span>'
+                : '<span class="tpl-status-pill pending" style="margin-left:5px;">待入帳</span>')
+            : '';
+          const dayHtml = tpl.billing_day > 0 ? '每月 ' + tpl.billing_day + ' 號扣款・' : '';
+          const amtHtml = tpl.amount > 0 ? formatMoney(tpl.amount) : '浮動金額';
+
+          // 顯示在本帳本對應到的均攤成員名稱
+          const matchedNames = (tpl.split_users || [])
+            .map(function (uid) { return memberMap[uid]; })
+            .filter(Boolean);
+          const splitDesc = matchedNames.length > 0
+            ? '預設均攤：' + escapeHtml(matchedNames.join('、'))
+            : ((tpl.split_users && tpl.split_users.length > 0)
+                ? '預設均攤：已記憶 ' + tpl.split_users.length + ' 人（帶入時依本帳本調整）'
+                : '預設均攤：全員均攤');
+
+          const useBtn = canQuickUse
+            ? '<button type="button" class="edit-link" style="margin-top:0; background:var(--green-bg); color:var(--green);" onclick="useRecurringFromManage(\'' + tpl.template_id + '\')">' +
+              '<i class="fa-solid fa-plus"></i> 帶入記帳</button>'
+            : '';
+
+          return '<div class="tpl-card ' + (tpl.isLoggedInActive ? '' : 'pending') + '">' +
+            '<div style="flex:1; min-width:0;">' +
+            '<div style="font-size:14.5px; font-weight:800; margin-bottom:3px;">' + escapeHtml(tpl.item_name) + statusHtml + '</div>' +
+            '<div style="font-size:12px; color:var(--text-sub); line-height:1.45;">' +
+            dayHtml + '預設金額：<b>' + amtHtml + '</b><br>' + splitDesc +
+            '</div></div>' +
+            '<div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px; flex-shrink:0;">' +
+            useBtn +
+            '<div>' +
+            '<button type="button" class="mini-icon-btn" onclick="openRecurringEditModal(\'' + tpl.template_id + '\')" title="編輯範本"><i class="fa-solid fa-pen"></i></button>' +
+            '<button type="button" class="mini-icon-btn danger" onclick="openDeleteRecurringModal(\'' + tpl.template_id + '\')" title="刪除範本"><i class="fa-solid fa-trash"></i></button>' +
+            '</div></div></div>';
+        }).join('');
+      }
+
+      openModal('recurringManageModal');
+    }
+
+    function useRecurringFromManage(templateId) {
+      closeModal('recurringManageModal');
+      openExpenseModal();
+      setTimeout(function () {
+        applyRecurringTemplateToExpense(templateId);
+      }, 30);
+    }
+
+    function openRecurringEditModal(templateId) {
+      const templates = (appState && appState.recurringTemplates) || [];
+      const target = templateId ? templates.find(function (t) { return t.template_id === templateId; }) : null;
+
+      document.getElementById('editRecurringId').value = target ? target.template_id : '';
+      document.getElementById('recurringEditTitle').textContent = target ? '編輯定期支出範本' : '新增定期支出範本';
+      document.getElementById('tplItemName').value = target ? target.item_name : '';
+      document.getElementById('tplAmount').value = target ? target.amount : '';
+      document.getElementById('tplBillingDay').value = (target && target.billing_day > 0) ? target.billing_day : '';
+
+      const data = appState && appState.activeLedgerData;
+      const members = (data && data.members) || [];
+      const selectedSet = new Set(target && target.split_users && target.split_users.length > 0
+        ? target.split_users
+        : members.map(function (m) { return m.userId; })
+      );
+
+      const grid = document.getElementById('tplSplitMembersGrid');
+      if (members.length === 0) {
+        grid.innerHTML = '<div style="grid-column:1/-1; font-size:12px; color:var(--text-sub);">加入帳本後即可在此勾選預設均攤成員（目前將預設為全員均攤）。</div>';
+      } else {
+        grid.innerHTML = members.map(function (m) {
+          const isChecked = selectedSet.has(m.userId);
+          const guestBadge = m.isGuest ? '<span class="guest-badge">未綁定</span>' : '';
+          return '<label class="split-chip ' + (isChecked ? 'checked' : '') + '" onclick="onToggleTplSplitChip(this)">' +
+            '<input type="checkbox" name="tplSplitUser" value="' + m.userId + '" ' + (isChecked ? 'checked' : '') + ' />' +
+            '<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + escapeHtml(m.nickname) + '</span>' +
+            guestBadge +
+            '</label>';
+        }).join('');
+      }
+
+      closeModal('recurringManageModal');
+      openModal('recurringEditModal');
+    }
+
+    function onToggleTplSplitChip(labelEl) {
+      setTimeout(function () {
+        const cb = labelEl.querySelector('input[type="checkbox"]');
+        labelEl.classList.toggle('checked', cb.checked);
+      }, 0);
+    }
+
+    function toggleSelectAllTplSplit() {
+      const checkboxes = Array.from(document.querySelectorAll('input[name="tplSplitUser"]'));
+      const allChecked = checkboxes.every(function (cb) { return cb.checked; });
+      checkboxes.forEach(function (cb) {
+        cb.checked = !allChecked;
+        cb.closest('.split-chip').classList.toggle('checked', cb.checked);
+      });
+    }
+
+    function backToRecurringManage() {
+      closeModal('recurringEditModal');
+      openRecurringManageModal();
+    }
+
+    function submitRecurringTemplateForm() {
+      const templateId = document.getElementById('editRecurringId').value;
+      const itemName = document.getElementById('tplItemName').value.trim();
+      const rawAmt = document.getElementById('tplAmount').value;
+      const amount = rawAmt === '' ? 0 : Number(rawAmt);
+      const billingDay = document.getElementById('tplBillingDay').value;
+      const splitUsers = Array.from(document.querySelectorAll('input[name="tplSplitUser"]:checked'))
+        .map(function (cb) { return cb.value; });
+
+      if (!itemName) {
+        showToast('請輸入定期項目名稱');
+        return;
+      }
+      if (isNaN(amount) || amount < 0) {
+        showToast('預設金額不可小於 0');
+        return;
+      }
+
+      closeModal('recurringEditModal');
+      reopenRecurringManage = true;
+      callGasApi('saveRecurringTemplate', {
+        userId: currentUser.userId,
+        template: {
+          template_id: templateId || null,
+          item_name: itemName,
+          amount: amount,
+          billing_day: billingDay,
+          split_users: splitUsers
+        }
+      }, '正在儲存定期支出範本...');
+    }
+
+    function openDeleteRecurringModal(templateId) {
+      const templates = (appState && appState.recurringTemplates) || [];
+      const target = templates.find(function (t) { return t.template_id === templateId; });
+      if (!target) return;
+
+      document.getElementById('deleteRecurringTargetId').value = templateId;
+      document.getElementById('deleteRecurringTargetName').textContent = target.item_name;
+      closeModal('recurringManageModal');
+      openModal('confirmDeleteRecurringModal');
+    }
+
+    function backToRecurringManageFromDelete() {
+      closeModal('confirmDeleteRecurringModal');
+      openRecurringManageModal();
+    }
+
+    function executeDeleteRecurringTemplate() {
+      const templateId = document.getElementById('deleteRecurringTargetId').value;
+      if (!templateId) return;
+
+      closeModal('confirmDeleteRecurringModal');
+      reopenRecurringManage = true;
+      callGasApi('deleteRecurringTemplate', {
+        userId: currentUser.userId,
+        templateId: templateId
+      }, '正在刪除定期支出範本...');
     }
 
     function confirmDeleteCurrentExpense() {
