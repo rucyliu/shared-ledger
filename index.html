@@ -1696,7 +1696,7 @@
 
       <div class="faq-search-wrap">
         <i class="fa-solid fa-magnifying-glass"></i>
-        <input type="text" id="faqSearchInput" class="faq-search-input" placeholder="搜尋關鍵字（例如：代管、編號、管理者、移交、結算）" oninput="filterFaqItems()" />
+        <input type="text" id="faqSearchInput" class="faq-search-input" placeholder="搜尋關鍵字（例如：定期、代管、編號、管理者、移交、結算）" oninput="filterFaqItems()" />
       </div>
 
       <div id="faqEmptyNotice" class="hidden" style="text-align:center; padding:24px 0; color:var(--text-sub); font-size:13px;">
@@ -1736,14 +1736,14 @@
               <i class="fa-solid fa-chevron-down faq-chevron"></i>
             </summary>
             <div class="faq-a">
-              未加好友仍可正常開啟網頁記帳；但加入官方帳號好友後，才能在<b>正式結算</b>、<b>被加入新帳本</b>或<b>接任帳本管理者</b>時收到 LINE 推播通知，也能直接在 LINE 聊天室輸入文字快速記帳與查詢個人明細。
+              未加好友仍可正常開啟網頁記帳；但加入官方帳號好友後，才能在<b>正式結算</b>、<b>被加入新帳本</b>或<b>接任帳本管理者</b>時收到 LINE 推播通知，也能直接在 LINE 聊天室輸入文字快速記帳、帶入定期支出與查詢個人明細。
             </div>
           </details>
         </div>
 
         <!-- 分類二 -->
         <div class="faq-category-group">
-          <div class="faq-cat-title"><i class="fa-solid fa-pen-to-square"></i> 二、日常記帳與成員管理</div>
+          <div class="faq-cat-title"><i class="fa-solid fa-pen-to-square"></i> 二、日常記帳、定期支出與成員</div>
 
           <details class="faq-item">
             <summary class="faq-q">
@@ -1774,6 +1774,18 @@
               點擊主卡片上「我的暱稱」旁的 <b>「改名」</b>，即可設定專屬於目前帳本的顯示名稱；<b>帳本管理者</b>則可在 <b>「結算總覽」</b> 的成員統計表中，點擊任一位成員（包含代管成員）旁的鉛筆圖示協助修改暱稱。
             </div>
           </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">
+              <span>7. 如何使用「個人定期支出」提醒每月固定開銷？</span>
+              <i class="fa-solid fa-chevron-down faq-chevron"></i>
+            </summary>
+            <div class="faq-a">
+              定期支出範本綁定你的個人 LINE 帳號，<b>跨所有帳本皆可共用</b>（適合每月固定訂閱費、會員費）：<br>
+              • <b>建立與管理</b>：可從 <b>「我的明細 ➔ 定期支出設定」</b> 新增，或在新增帳務時勾選 <b>「同時儲存為我的定期支出範本」</b>。金額可填 <span class="faq-code">0</span> 代表浮動帳單（如水電費），也可設定每月扣款日（1～31 號）與預設均攤成員。<br>
+              • <b>待入帳提醒與一鍵帶入</b>：系統會自動比對目前帳本明細，尚未入帳的項目會在帳務頁頂部提示；點擊「新增帳務項目」頂部的膠囊即可一鍵帶入並自動對應原分攤成員。
+            </div>
+          </details>
         </div>
 
         <!-- 分類三 -->
@@ -1782,17 +1794,19 @@
 
           <details class="faq-item">
             <summary class="faq-q">
-              <span>7. 怎麼在 LINE 聊天室直接打字快速記帳？</span>
+              <span>8. 怎麼在 LINE 聊天室直接打字快速記帳？</span>
               <i class="fa-solid fa-chevron-down faq-chevron"></i>
             </summary>
             <div class="faq-a">
-              在官方帳號聊天室直接輸入 <span class="faq-code">項目 金額</span>（例如：<span class="faq-code">晚餐 600</span>）。系統不會直接寫入，而是先回傳 <b>「草稿確認卡」</b> 讓你核對目標帳本與金額，按下 <b>「✅ 確認入帳」</b> 才會正式儲存。
+              • <b>自由輸入</b>：在聊天室直接輸入 <span class="faq-code">項目 金額</span>（例如：<span class="faq-code">晚餐 600</span>）。<br>
+              • <b>定期支出帶入</b>：輸入 <span class="faq-code">定期</span>（或點擊快捷列「定期支出」）可查看個人定期清單與待入帳狀態，點擊固定金額項目即可直接產生草稿。<br>
+              • <b>草稿防呆</b>：系統會先回傳 <b>「草稿確認卡」</b> 讓你核對目標帳本與金額，按下 <b>「✅ 確認入帳」</b> 才會正式儲存。
             </div>
           </details>
 
           <details class="faq-item">
             <summary class="faq-q">
-              <span>8. 聊天室記帳如何指定墊付與均攤？成員編號去哪看？</span>
+              <span>9. 聊天室記帳如何指定墊付與均攤？成員編號去哪看？</span>
               <i class="fa-solid fa-chevron-down faq-chevron"></i>
             </summary>
             <div class="faq-a">
@@ -1805,7 +1819,7 @@
 
           <details class="faq-item">
             <summary class="faq-q">
-              <span>9. 電腦版 LINE 看不到下方圖文選單怎麼辦？</span>
+              <span>10. 電腦版 LINE 看不到下方圖文選單怎麼辦？</span>
               <i class="fa-solid fa-chevron-down faq-chevron"></i>
             </summary>
             <div class="faq-a">
@@ -1820,7 +1834,7 @@
 
           <details class="faq-item">
             <summary class="faq-q">
-              <span>10. 「最小轉帳結清路徑」是怎麼計算的？</span>
+              <span>11. 「最小轉帳結清路徑」是怎麼計算的？</span>
               <i class="fa-solid fa-chevron-down faq-chevron"></i>
             </summary>
             <div class="faq-a">
@@ -1830,7 +1844,7 @@
 
           <details class="faq-item">
             <summary class="faq-q">
-              <span>11. 如何正式結算鎖定並保存帳務報表？</span>
+              <span>12. 如何正式結算鎖定並保存帳務報表？</span>
               <i class="fa-solid fa-chevron-down faq-chevron"></i>
             </summary>
             <div class="faq-a">
@@ -1841,7 +1855,7 @@
 
           <details class="faq-item">
             <summary class="faq-q">
-              <span>12. 如何沿用固定成員、移交管理權限或刪除帳本？</span>
+              <span>13. 如何沿用固定成員、移交管理權限或刪除帳本？</span>
               <i class="fa-solid fa-chevron-down faq-chevron"></i>
             </summary>
             <div class="faq-a">
