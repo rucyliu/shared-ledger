@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
+
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <title>共享記帳本</title>
   <!-- 瀏覽器分頁與桌面捷徑圖示 -->
   <link rel="icon" type="image/png" sizes="512x512" href="./icon.png" />
@@ -13,1204 +15,9 @@
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-  <style>
-    :root {
-      --bg-page: #fdf8f6;
-      --bg-card: #ffffff;
-      --bg-soft-pink: #fcecef;
-      --bg-soft-blue: #eef6fc;
-      --text-main: #3d2c27;
-      --text-sub: #7d6b65;
-      --border-color: #eadcd7;
-      --primary: #d9737b;
-      --primary-dark: #c05a62;
-      --accent-blue: #4a89dc;
-      --green: #238653;
-      --green-bg: #e8f7ef;
-      --red: #d64545;
-      --red-bg: #fdecec;
-      --shadow: 0 4px 14px rgba(61, 44, 39, 0.06);
-      --radius: 16px;
-    }
-
-    * {
-      box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans TC", sans-serif;
-      background-color: var(--bg-page);
-      color: var(--text-main);
-      padding-bottom: calc(84px + env(safe-area-inset-bottom));
-    }
-
-    .app-container {
-      max-width: 520px;
-      margin: 0 auto;
-      padding: 12px 14px;
-    }
-
-    .top-bar {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      background: var(--bg-card);
-      padding: 10px 10px;
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      border: 1px solid var(--border-color);
-      margin-bottom: 12px;
-    }
-
-    .ledger-select-wrap {
-      flex: 1;
-      position: relative;
-      min-width: 0;
-    }
-
-    .ledger-select {
-      width: 100%;
-      appearance: none;
-      background: var(--bg-soft-pink);
-      border: 1px solid #f2cfd5;
-      border-radius: 10px;
-      padding: 8px 26px 8px 10px;
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--text-main);
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      overflow: hidden;
-      cursor: pointer;
-    }
-
-    .ledger-select-wrap::after {
-      content: "\f078";
-      font-family: "Font Awesome 6 Free";
-      font-weight: 900;
-      font-size: 11px;
-      color: var(--text-sub);
-      position: absolute;
-      right: 9px;
-      top: 50%;
-      transform: translateY(-50%);
-      pointer-events: none;
-    }
-
-    .icon-btn {
-      border: 1px solid var(--border-color);
-      background: #fff;
-      color: var(--text-main);
-      border-radius: 10px;
-      padding: 7px 9px;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
-
-    .icon-btn:active {
-      transform: scale(0.97);
-    }
-
-    .icon-btn.primary-outline {
-      border-color: var(--primary);
-      color: var(--primary-dark);
-      background: var(--bg-soft-pink);
-    }
-
-    /* 未加官方帳號好友頂部提醒橫幅 */
-    .friend-banner {
-      background: #fff3cd;
-      border: 1px solid #ffe69c;
-      color: #664d03;
-      border-radius: 12px;
-      padding: 10px 12px;
-      margin-bottom: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      font-size: 12px;
-      box-shadow: var(--shadow);
-    }
-
-    .friend-banner-btn {
-      background: #06c755;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 7px 11px;
-      font-size: 12px;
-      font-weight: 700;
-      white-space: nowrap;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      flex-shrink: 0;
-    }
-
-    .friend-banner-btn:active {
-      opacity: 0.9;
-      transform: scale(0.97);
-    }
-
-    .hero-card {
-      background: linear-gradient(135deg, #fff5f6 0%, #eef6fc 100%);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius);
-      padding: 16px;
-      box-shadow: var(--shadow);
-      margin-bottom: 12px;
-    }
-
-    .hero-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-
-    .hero-title {
-      font-size: 19px;
-      font-weight: 800;
-      margin: 0 0 4px 0;
-      line-height: 1.3;
-    }
-
-    .hero-meta {
-      font-size: 12px;
-      color: var(--text-sub);
-      line-height: 1.5;
-    }
-
-    .status-badge {
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 700;
-      white-space: nowrap;
-    }
-
-    .status-active {
-      background: var(--green-bg);
-      color: var(--green);
-    }
-
-    .status-settled {
-      background: #ece7e5;
-      color: #5c4e49;
-    }
-
-    .guest-badge {
-      display: inline-block;
-      font-size: 10px;
-      font-weight: 700;
-      background: #ece7e5;
-      color: #6b5b56;
-      padding: 1px 5px;
-      border-radius: 4px;
-      margin-left: 4px;
-      vertical-align: middle;
-    }
-
-    .admin-badge {
-      display: inline-block;
-      font-size: 10px;
-      font-weight: 700;
-      background: #fef3c7;
-      color: #b45309;
-      padding: 1px 5px;
-      border-radius: 4px;
-      margin-left: 4px;
-      vertical-align: middle;
-    }
-
-    .hero-stats {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      background: rgba(255, 255, 255, 0.85);
-      border-radius: 12px;
-      padding: 10px 12px;
-    }
-
-    .stat-box span {
-      display: block;
-      font-size: 11px;
-      color: var(--text-sub);
-      margin-bottom: 2px;
-    }
-
-    .stat-box strong {
-      font-size: 18px;
-      font-weight: 800;
-    }
-
-    .invite-bar {
-      margin-top: 12px;
-      padding-top: 10px;
-      border-top: 1px dashed var(--border-color);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .invite-code-pill {
-      font-size: 12px;
-      color: var(--text-sub);
-    }
-
-    .invite-code-pill b {
-      color: var(--text-main);
-      font-family: monospace;
-      font-size: 14px;
-      letter-spacing: 1px;
-      background: #fff;
-      padding: 2px 6px;
-      border-radius: 6px;
-      border: 1px solid var(--border-color);
-    }
-
-    .invite-actions {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
-
-    .tabs {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      background: var(--bg-card);
-      border-radius: 12px;
-      padding: 4px;
-      border: 1px solid var(--border-color);
-      margin-bottom: 12px;
-    }
-
-    .tab-btn {
-      border: none;
-      background: transparent;
-      padding: 9px 4px;
-      border-radius: 9px;
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--text-sub);
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-
-    .tab-btn.active {
-      background: var(--primary);
-      color: #fff;
-    }
-
-    .card {
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius);
-      padding: 14px;
-      box-shadow: var(--shadow);
-      margin-bottom: 12px;
-    }
-
-    .section-title {
-      font-size: 14px;
-      font-weight: 800;
-      margin: 0 0 10px 0;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      color: var(--text-main);
-    }
-
-    .expense-item {
-      padding: 12px 0;
-      border-bottom: 1px solid #f2eae7;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 10px;
-    }
-
-    .expense-item:last-child {
-      border-bottom: none;
-      padding-bottom: 0;
-    }
-
-    .expense-item:first-child {
-      padding-top: 0;
-    }
-
-    .expense-main {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .expense-title {
-      font-size: 15px;
-      font-weight: 700;
-      margin-bottom: 4px;
-      word-break: break-word;
-    }
-
-    .expense-sub {
-      font-size: 12px;
-      color: var(--text-sub);
-      line-height: 1.45;
-    }
-
-    .payer-tag {
-      display: inline-block;
-      background: var(--bg-soft-blue);
-      color: #2c66b8;
-      font-weight: 700;
-      padding: 1px 6px;
-      border-radius: 5px;
-      margin-right: 4px;
-    }
-
-    .expense-right {
-      text-align: right;
-      flex-shrink: 0;
-    }
-
-    .expense-amount {
-      font-size: 16px;
-      font-weight: 800;
-      color: var(--text-main);
-    }
-
-    .edit-link {
-      display: inline-block;
-      margin-top: 5px;
-      font-size: 12px;
-      color: var(--primary-dark);
-      background: var(--bg-soft-pink);
-      padding: 3px 8px;
-      border-radius: 6px;
-      border: none;
-      cursor: pointer;
-      font-weight: 600;
-    }
-
-    .mini-icon-btn {
-      border: none;
-      background: #f4ece9;
-      color: var(--text-sub);
-      border-radius: 6px;
-      padding: 3px 6px;
-      font-size: 11px;
-      cursor: pointer;
-      margin-left: 4px;
-      vertical-align: middle;
-    }
-
-    .mini-icon-btn.danger {
-      background: var(--red-bg);
-      color: var(--red);
-    }
-
-    .personal-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-
-    .p-box {
-      background: #faf6f5;
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 10px 6px;
-      text-align: center;
-    }
-
-    .p-box span {
-      display: block;
-      font-size: 11px;
-      color: var(--text-sub);
-      margin-bottom: 4px;
-    }
-
-    .p-box strong {
-      font-size: 15px;
-      font-weight: 800;
-    }
-
-    .text-green { color: var(--green) !important; }
-    .text-red { color: var(--red) !important; }
-
-    .transfer-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: #faf6f5;
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 10px 12px;
-      margin-bottom: 8px;
-      font-size: 14px;
-    }
-
-    .transfer-row:last-child {
-      margin-bottom: 0;
-    }
-
-    .transfer-users {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-weight: 700;
-    }
-
-    .transfer-arrow {
-      color: var(--primary);
-      font-size: 12px;
-    }
-
-    .transfer-amt {
-      font-weight: 800;
-      color: var(--red);
-      font-size: 15px;
-    }
-
-    .member-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-    }
-
-    .member-table th {
-      text-align: left;
-      color: var(--text-sub);
-      font-weight: 600;
-      padding: 6px 4px;
-      border-bottom: 1px solid var(--border-color);
-    }
-
-    .member-table td {
-      padding: 9px 4px;
-      border-bottom: 1px solid #f4ece9;
-    }
-
-    .member-table tr:last-child td {
-      border-bottom: none;
-    }
-
-    .num-col {
-      text-align: right !important;
-      font-variant-numeric: tabular-nums;
-      white-space: nowrap;
-    }
-
-    .fab-bar {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
-      background: rgba(253, 248, 246, 0.92);
-      backdrop-filter: blur(6px);
-      border-top: 1px solid var(--border-color);
-      display: flex;
-      justify-content: center;
-      z-index: 50;
-    }
-
-    .btn-primary {
-      width: 100%;
-      max-width: 492px;
-      background: var(--primary);
-      color: #fff;
-      border: none;
-      border-radius: 12px;
-      padding: 12px 16px;
-      font-size: 15px;
-      font-weight: 700;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 7px;
-      box-shadow: 0 4px 12px rgba(217, 115, 123, 0.3);
-      text-decoration: none;
-      transition: opacity 0.15s;
-    }
-
-    .btn-primary:active {
-      background: var(--primary-dark);
-      transform: scale(0.99);
-    }
-
-    .btn-primary:disabled {
-      opacity: 0.45;
-      cursor: not-allowed;
-    }
-
-    .btn-danger {
-      width: 100%;
-      background: var(--red);
-      color: #fff;
-      border: none;
-      border-radius: 12px;
-      padding: 12px 16px;
-      font-size: 15px;
-      font-weight: 700;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 7px;
-      transition: opacity 0.15s;
-    }
-
-    .btn-danger:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
-
-    .btn-danger-outline {
-      width: 100%;
-      background: #fff;
-      color: var(--red);
-      border: 1.5px solid #f1b0b7;
-      border-radius: 12px;
-      padding: 11px 16px;
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 7px;
-    }
-
-    .btn-secondary {
-      background: #f2eae7;
-      color: var(--text-main);
-      border: none;
-      border-radius: 12px;
-      padding: 11px 16px;
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-    }
-
-    .claim-option-btn {
-      width: 100%;
-      text-align: left;
-      background: #faf6f5;
-      border: 1.5px solid var(--border-color);
-      border-radius: 12px;
-      padding: 12px 14px;
-      margin-bottom: 8px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      color: var(--text-main);
-    }
-
-    .claim-option-btn:active {
-      border-color: var(--primary);
-      background: var(--bg-soft-pink);
-    }
-
-    .claim-option-btn.new-member {
-      background: var(--bg-soft-blue);
-      border-color: #bfd7f2;
-    }
-
-    /* FAQ 折疊式手風琴樣式 */
-    .faq-search-wrap {
-      position: relative;
-      margin-bottom: 12px;
-    }
-
-    .faq-search-wrap i {
-      position: absolute;
-      left: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--text-sub);
-      font-size: 13px;
-    }
-
-    .faq-search-input {
-      width: 100%;
-      padding: 9px 12px 9px 34px;
-      border: 1px solid var(--border-color);
-      border-radius: 10px;
-      font-size: 14px;
-      color: var(--text-main);
-      background: #faf6f5;
-    }
-
-    .faq-search-input:focus {
-      outline: none;
-      border-color: var(--primary);
-      background: #fff;
-    }
-
-    .faq-cat-title {
-      font-size: 12px;
-      font-weight: 800;
-      color: var(--primary-dark);
-      margin: 14px 0 6px 0;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .faq-cat-title:first-child {
-      margin-top: 0;
-    }
-
-    .faq-item {
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      background: #fff;
-      margin-bottom: 7px;
-      overflow: hidden;
-    }
-
-    .faq-item[open] {
-      border-color: #e2b8be;
-      background: #fffafa;
-    }
-
-    .faq-q {
-      list-style: none;
-      padding: 11px 12px;
-      font-size: 13.5px;
-      font-weight: 700;
-      color: var(--text-main);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      line-height: 1.4;
-      user-select: none;
-    }
-
-    .faq-q::-webkit-details-marker {
-      display: none;
-    }
-
-    .faq-chevron {
-      color: var(--text-sub);
-      font-size: 11px;
-      transition: transform 0.2s ease;
-      flex-shrink: 0;
-    }
-
-    .faq-item[open] .faq-chevron {
-      transform: rotate(180deg);
-      color: var(--primary-dark);
-    }
-
-    .faq-a {
-      padding: 0 12px 12px 12px;
-      font-size: 13px;
-      color: var(--text-sub);
-      line-height: 1.6;
-      border-top: 1px dashed #f0e4e0;
-      padding-top: 9px;
-    }
-
-    .faq-code {
-      display: inline-block;
-      background: #f4ece9;
-      color: var(--text-main);
-      font-family: monospace;
-      font-size: 12px;
-      font-weight: 700;
-      padding: 1px 6px;
-      border-radius: 5px;
-    }
-
-    .modal-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(38, 26, 23, 0.52);
-      display: none;
-      align-items: flex-end;
-      justify-content: center;
-      z-index: 100;
-    }
-
-    .modal-backdrop.open {
-      display: flex;
-    }
-
-    .modal-sheet {
-      background: #fff;
-      width: 100%;
-      max-width: 520px;
-      border-radius: 20px 20px 0 0;
-      padding: 18px 18px calc(20px + env(safe-area-inset-bottom));
-      max-height: 88vh;
-      overflow-y: auto;
-      animation: slideUp 0.2s ease-out;
-    }
-
-    @keyframes slideUp {
-      from { transform: translateY(30px); opacity: 0.6; }
-      to { transform: translateY(0); opacity: 1; }
-    }
-
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 14px;
-    }
-
-    .modal-header h3 {
-      margin: 0;
-      font-size: 17px;
-      font-weight: 800;
-    }
-
-    .close-btn {
-      background: #f4ece9;
-      border: none;
-      width: 30px;
-      height: 30px;
-      border-radius: 50%;
-      color: var(--text-sub);
-      font-size: 15px;
-      cursor: pointer;
-    }
-
-    .form-group {
-      margin-bottom: 14px;
-    }
-
-    .form-label {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 13px;
-      font-weight: 700;
-      margin-bottom: 6px;
-      color: var(--text-main);
-    }
-
-    .form-control {
-      width: 100%;
-      padding: 11px 12px;
-      border: 1px solid var(--border-color);
-      border-radius: 10px;
-      font-size: 15px;
-      color: var(--text-main);
-      background: #fff;
-    }
-
-    .form-control:focus {
-      outline: none;
-      border-color: var(--primary);
-    }
-
-    .split-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
-    }
-
-    .split-chip {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 9px 10px;
-      border: 1.5px solid var(--border-color);
-      border-radius: 10px;
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: 600;
-      background: #fff;
-      user-select: none;
-      min-width: 0;
-    }
-
-    .split-chip.checked {
-      border-color: var(--primary);
-      background: var(--bg-soft-pink);
-      color: var(--primary-dark);
-    }
-
-    .split-chip input {
-      accent-color: var(--primary);
-      width: 16px;
-      height: 16px;
-      margin: 0;
-      flex-shrink: 0;
-    }
-
-    .split-preview {
-      margin-top: 8px;
-      font-size: 12px;
-      color: var(--text-sub);
-      background: #faf6f5;
-      padding: 7px 10px;
-      border-radius: 8px;
-      text-align: right;
-    }
-
-    .modal-actions {
-      display: flex;
-      gap: 8px;
-      margin-top: 16px;
-    }
-
-    .empty-state {
-      text-align: center;
-      padding: 36px 20px;
-      background: #fff;
-      border-radius: var(--radius);
-      border: 1px solid var(--border-color);
-      margin-top: 16px;
-    }
-
-    .empty-icon {
-      font-size: 42px;
-      color: var(--primary);
-      margin-bottom: 12px;
-    }
-
-    .loading-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(253, 248, 246, 0.92);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 200;
-      gap: 12px;
-      font-weight: 700;
-      color: var(--text-main);
-    }
-
-    .spinner {
-      width: 36px;
-      height: 36px;
-      border: 4px solid #f2cfd5;
-      border-top-color: var(--primary);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    .toast {
-      position: fixed;
-      top: 14px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #3d2c27;
-      color: #fff;
-      padding: 10px 16px;
-      border-radius: 99px;
-      font-size: 13px;
-      font-weight: 600;
-      z-index: 300;
-      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
-      display: none;
-      max-width: 90%;
-      text-align: center;
-    }
-
-    .hidden {
-      display: none !important;
-    }
-
-    /* 待入帳提醒橫幅 */
-    .recurring-alert-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      background: #fff8eb;
-      border: 1px solid #f7d99c;
-      color: #7a4f01;
-      border-radius: 12px;
-      padding: 9px 12px;
-      margin-bottom: 12px;
-      font-size: 12.5px;
-      cursor: pointer;
-    }
-
-    .recurring-alert-bar:active {
-      background: #fef0d3;
-    }
-
-    /* 新增帳務彈窗：快速帶入定期項目列 */
-    .recurring-quick-box {
-      background: #faf6f5;
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 10px 11px;
-      margin-bottom: 14px;
-    }
-
-    .recurring-quick-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      font-size: 12px;
-      font-weight: 800;
-      color: var(--text-main);
-      margin-bottom: 8px;
-    }
-
-    .recurring-chips-scroll {
-      display: flex;
-      gap: 7px;
-      overflow-x: auto;
-      padding-bottom: 4px;
-      -webkit-overflow-scrolling: touch;
-    }
-
-    .recurring-chip {
-      flex-shrink: 0;
-      border: 1.5px solid var(--border-color);
-      background: #fff;
-      border-radius: 10px;
-      padding: 6px 10px;
-      font-size: 12px;
-      color: var(--text-main);
-      cursor: pointer;
-      display: inline-flex;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 2px;
-      text-align: left;
-      transition: all 0.15s;
-    }
-
-    .recurring-chip.pending {
-      border-color: #f3c677;
-      background: #fffcf5;
-    }
-
-    .recurring-chip.logged {
-      opacity: 0.72;
-      background: #f7f4f3;
-    }
-
-    .recurring-chip.selected {
-      border-color: var(--primary);
-      background: var(--bg-soft-pink);
-      opacity: 1;
-    }
-
-    .tpl-status-pill {
-      display: inline-block;
-      font-size: 10px;
-      font-weight: 700;
-      padding: 1px 6px;
-      border-radius: 99px;
-      vertical-align: middle;
-    }
-
-    .tpl-status-pill.pending {
-      background: #fef3c7;
-      color: #b45309;
-    }
-
-    .tpl-status-pill.logged {
-      background: var(--green-bg);
-      color: var(--green);
-    }
-
-    /* 管理視窗內的定期範本卡片 */
-    .tpl-card {
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 11px 12px;
-      background: #fff;
-      margin-bottom: 9px;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 10px;
-    }
-
-    .tpl-card.pending {
-      border-color: #f3c677;
-      background: #fffdf9;
-    }
-
-    /* 贊助／補助款類型切換器 */
-    .record-type-switch {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 6px;
-      background: #f4ece9;
-      padding: 4px;
-      border-radius: 12px;
-      margin-bottom: 14px;
-    }
-
-    .record-type-btn {
-      border: none;
-      background: transparent;
-      padding: 9px 6px;
-      border-radius: 9px;
-      font-size: 13.5px;
-      font-weight: 700;
-      color: var(--text-sub);
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      transition: all 0.15s;
-    }
-
-    .record-type-btn.active-expense {
-      background: var(--primary);
-      color: #fff;
-      box-shadow: 0 2px 8px rgba(217, 115, 123, 0.28);
-    }
-
-    .record-type-btn.active-subsidy {
-      background: var(--green);
-      color: #fff;
-      box-shadow: 0 2px 8px rgba(35, 134, 83, 0.25);
-    }
-
-    /* 列表中的贊助／補助款視覺區隔 */
-    .expense-item.is-subsidy {
-      background: #f4fbf7;
-      margin: 0 -10px;
-      padding: 12px 10px;
-      border-radius: 10px;
-      border-left: 3.5px solid var(--green);
-      border-bottom: 1px solid #e2f2e9;
-    }
-
-    .subsidy-tag {
-      display: inline-block;
-      background: var(--green-bg);
-      color: var(--green);
-      font-weight: 700;
-      padding: 1px 6px;
-      border-radius: 5px;
-      margin-right: 4px;
-    }
-
-    .subsidy-hint-box {
-      margin-top: 6px;
-      font-size: 11.5px;
-      color: #1e6b43;
-      background: #edf8f2;
-      border: 1px solid #cdebd9;
-      padding: 7px 10px;
-      border-radius: 8px;
-      line-height: 1.45;
-    }
-
-    /* 含贊助／補助款時，個人統計改為 2x2 排版 */
-    .personal-grid.has-subsidy {
-      grid-template-columns: repeat(2, 1fr);
-    }
-
-    /* 操作歷程篩選與時間軸卡片 */
-    .log-filter-bar {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 6px;
-      background: #f4ece9;
-      padding: 4px;
-      border-radius: 10px;
-      margin-bottom: 12px;
-    }
-
-    .log-filter-btn {
-      border: none;
-      background: transparent;
-      padding: 7px 6px;
-      border-radius: 8px;
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--text-sub);
-      cursor: pointer;
-    }
-
-    .log-filter-btn.active {
-      background: #fff;
-      color: var(--text-main);
-      box-shadow: 0 1px 4px rgba(61, 44, 39, 0.1);
-    }
-
-    .log-card {
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 10px 12px;
-      background: #fff;
-      margin-bottom: 8px;
-    }
-
-    .log-card.type-add { border-left: 3.5px solid var(--green); }
-    .log-card.type-edit { border-left: 3.5px solid var(--accent-blue); background: #f9fbff; }
-    .log-card.type-del { border-left: 3.5px solid var(--red); background: #fff9f9; }
-
-    .log-card-top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 6px;
-      margin-bottom: 5px;
-    }
-
-    .log-badge {
-      display: inline-block;
-      font-size: 11px;
-      font-weight: 800;
-      padding: 1px 7px;
-      border-radius: 99px;
-    }
-
-    .log-badge.add { background: var(--green-bg); color: var(--green); }
-    .log-badge.edit { background: var(--bg-soft-blue); color: #2c66b8; }
-    .log-badge.del { background: var(--red-bg); color: var(--red); }
-
-    .log-source-pill {
-      display: inline-block;
-      font-size: 10px;
-      font-weight: 700;
-      padding: 1px 6px;
-      border-radius: 5px;
-      background: #e6f8ed;
-      color: #069c43;
-      margin-left: 5px;
-      vertical-align: middle;
-    }
-  </style>
+  <link rel="stylesheet" href="./style.css" />
 </head>
+
 <body>
 
   <!-- Loading 遮罩 -->
@@ -1221,6 +28,11 @@
 
   <!-- Toast 提示訊息 -->
   <div id="toastBox" class="toast"></div>
+
+  <!-- 背景靜默同步提示膠囊 -->
+  <div id="syncPill" class="sync-pill hidden">
+    <i class="fa-solid fa-rotate fa-spin"></i> 正在同步最新資料...
+  </div>
 
   <div class="app-container">
     <!-- 頂部帳本切換與建立/加入/說明列 -->
@@ -1284,7 +96,8 @@
           <div class="stat-box">
             <span>帳本累積總支出</span>
             <strong id="ledgerTotalAmount">$0</strong>
-            <div id="heroSubsidySub" class="hidden" style="font-size:11px; color:var(--green); font-weight:700; margin-top:2px;"></div>
+            <div id="heroSubsidySub" class="hidden"
+              style="font-size:11px; color:var(--green); font-weight:700; margin-top:2px;"></div>
           </div>
           <div class="stat-box">
             <span>我的結算淨額</span>
@@ -1320,7 +133,7 @@
         </button>
       </div>
 
-     <!-- 分頁 1：帳務明細 -->
+      <!-- 分頁 1：帳務明細 -->
       <div id="tab-expenses" class="tab-panel">
         <div id="pendingRecurringBanner" class="recurring-alert-bar hidden" onclick="openExpenseModal()">
           <div>
@@ -1339,7 +152,8 @@
               <span id="readOnlyHint" class="hidden" style="font-size:12px; color:var(--text-sub); font-weight:600;">
                 <i class="fa-solid fa-lock"></i> 已結算唯讀
               </span>
-              <button type="button" class="icon-btn" style="padding:4px 9px; font-size:12px;" onclick="openActivityLogModal()">
+              <button type="button" class="icon-btn" style="padding:4px 9px; font-size:12px;"
+                onclick="openActivityLogModal()">
                 <i class="fa-solid fa-clock-rotate-left"></i> 歷程
               </button>
             </div>
@@ -1353,7 +167,8 @@
         <div class="card">
           <div class="section-title">
             <span><i class="fa-solid fa-wallet" style="color:var(--primary);"></i> 個人收支統計</span>
-            <button type="button" class="icon-btn primary-outline" style="padding:4px 9px; font-size:12px;" onclick="openRecurringManageModal()">
+            <button type="button" class="icon-btn primary-outline" style="padding:4px 9px; font-size:12px;"
+              onclick="openRecurringManageModal()">
               <i class="fa-solid fa-repeat"></i> 定期支出設定
             </button>
           </div>
@@ -1412,10 +227,13 @@
           <div class="section-title" style="flex-wrap:wrap;">
             <span><i class="fa-solid fa-money-bill-transfer" style="color:var(--primary);"></i> 最小轉帳結清路徑</span>
             <div style="display:flex; gap:6px;">
-              <button type="button" class="icon-btn primary-outline" style="padding:4px 9px; font-size:12px;" onclick="copyTextSettlementReport()">
+              <button type="button" class="icon-btn primary-outline" style="padding:4px 9px; font-size:12px;"
+                onclick="copyTextSettlementReport()">
                 <i class="fa-regular fa-copy"></i> 複製文字
               </button>
-              <button type="button" class="icon-btn" style="padding:4px 9px; font-size:12px; border-color:#b7dfc9; background:var(--green-bg); color:var(--green);" onclick="exportLedgerCsv()">
+              <button type="button" class="icon-btn"
+                style="padding:4px 9px; font-size:12px; border-color:#b7dfc9; background:var(--green-bg); color:var(--green);"
+                onclick="exportLedgerCsv()">
                 <i class="fa-solid fa-file-csv"></i> 匯出 CSV
               </button>
             </div>
@@ -1462,7 +280,9 @@
           <p style="font-size:12px; color:var(--text-sub); margin:0 0 12px 0; line-height:1.5;">
             可指定本帳本中另一位已綁定 LINE 的成員接替作為「帳本管理者」。<b>移交後你將立即轉為一般成員</b>，不再具備結算、移除成員與刪除帳本權限。
           </p>
-          <button type="button" class="btn-secondary" style="width:100%; background:#eef6fc; color:#2c66b8; border:1px solid #bfd7f2;" onclick="openTransferAdminModal()">
+          <button type="button" class="btn-secondary"
+            style="width:100%; background:#eef6fc; color:#2c66b8; border:1px solid #bfd7f2;"
+            onclick="openTransferAdminModal()">
             <i class="fa-solid fa-right-left"></i> 指定接替的帳本管理者
           </button>
         </div>
@@ -1506,7 +326,8 @@
 
       <!-- 帳務類型切換：一般支出 vs 贊助／補助款 -->
       <div class="record-type-switch">
-        <button type="button" id="btnTypeExpense" class="record-type-btn active-expense" onclick="setExpenseRecordType('EXPENSE')">
+        <button type="button" id="btnTypeExpense" class="record-type-btn active-expense"
+          onclick="setExpenseRecordType('EXPENSE')">
           <i class="fa-solid fa-receipt"></i> 一般支出
         </button>
         <button type="button" id="btnTypeSubsidy" class="record-type-btn" onclick="setExpenseRecordType('SUBSIDY')">
@@ -1518,7 +339,8 @@
       <div id="quickRecurringSection" class="recurring-quick-box">
         <div class="recurring-quick-header">
           <span><i class="fa-solid fa-bolt" style="color:#d97706;"></i> 快速帶入我的定期支出</span>
-          <button type="button" class="icon-btn" style="padding:2px 8px; font-size:11px;" onclick="openRecurringManageModal(true)">
+          <button type="button" class="icon-btn" style="padding:2px 8px; font-size:11px;"
+            onclick="openRecurringManageModal(true)">
             <i class="fa-solid fa-gear"></i> 管理範本
           </button>
         </div>
@@ -1532,7 +354,8 @@
 
       <div class="form-group">
         <label id="expAmountLabel" class="form-label">支付金額</label>
-        <input type="number" id="expAmount" class="form-control" inputmode="decimal" placeholder="請輸入金額" min="1" step="any" oninput="updateSplitPreview()" />
+        <input type="number" id="expAmount" class="form-control" inputmode="decimal" placeholder="請輸入金額" min="1"
+          step="any" oninput="updateSplitPreview()" />
       </div>
 
       <div class="form-group">
@@ -1546,7 +369,8 @@
       <div class="form-group">
         <div class="form-label">
           <span id="expSplitLabel">哪些人均攤應付</span>
-          <button type="button" class="icon-btn" style="padding:3px 8px; font-size:12px;" onclick="toggleSelectAllSplit()">
+          <button type="button" class="icon-btn" style="padding:3px 8px; font-size:12px;"
+            onclick="toggleSelectAllSplit()">
             全選 / 取消全選
           </button>
         </div>
@@ -1558,19 +382,26 @@
       </div>
 
       <!-- 順手存為個人定期支出範本（切換為贊助／補助款時自動隱藏） -->
-      <div id="saveAsRecurringSection" style="background:#faf6f5; border:1px solid var(--border-color); border-radius:12px; padding:10px 12px; margin-bottom:12px;">
-        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color:var(--text-main); cursor:pointer; margin:0;">
-          <input type="checkbox" id="saveAsRecurringCheckbox" style="accent-color:var(--primary); width:16px; height:16px; margin:0;" onchange="onToggleSaveAsRecurring()" />
+      <div id="saveAsRecurringSection"
+        style="background:#faf6f5; border:1px solid var(--border-color); border-radius:12px; padding:10px 12px; margin-bottom:12px;">
+        <label
+          style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color:var(--text-main); cursor:pointer; margin:0;">
+          <input type="checkbox" id="saveAsRecurringCheckbox"
+            style="accent-color:var(--primary); width:16px; height:16px; margin:0;"
+            onchange="onToggleSaveAsRecurring()" />
           <span><i class="fa-solid fa-repeat" style="color:var(--primary);"></i> 同時儲存為我的定期支出範本</span>
         </label>
-        <div id="recurringBillingDayWrap" class="hidden" style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--border-color); display:flex; align-items:center; justify-content:space-between; gap:8px;">
+        <div id="recurringBillingDayWrap" class="hidden"
+          style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--border-color); display:flex; align-items:center; justify-content:space-between; gap:8px;">
           <span style="font-size:12px; color:var(--text-sub);">每月扣款日（選填，1～31）：</span>
-          <input type="number" id="saveAsRecurringDay" class="form-control" style="width:96px; padding:6px 8px; font-size:13px;" min="1" max="31" placeholder="例如 5" />
+          <input type="number" id="saveAsRecurringDay" class="form-control"
+            style="width:96px; padding:6px 8px; font-size:13px;" min="1" max="31" placeholder="例如 5" />
         </div>
       </div>
 
       <div class="modal-actions">
-        <button id="btnDeleteExpense" type="button" class="btn-secondary text-red hidden" onclick="confirmDeleteCurrentExpense()">
+        <button id="btnDeleteExpense" type="button" class="btn-secondary text-red hidden"
+          onclick="confirmDeleteCurrentExpense()">
           <i class="fa-solid fa-trash"></i> 刪除
         </button>
         <button id="btnSaveExpense" type="button" class="btn-primary" style="flex:1;" onclick="submitExpenseForm()">
@@ -1592,12 +423,16 @@
         <input type="text" id="newLedgerTitle" class="form-control" placeholder="例如：11月生活費、沖繩四天三夜" maxlength="30" />
       </div>
 
-      <div id="copyMembersSection" class="form-group hidden" style="background:#faf6f5; border:1px solid var(--border-color); border-radius:12px; padding:12px;">
-        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color:var(--text-main); cursor:pointer; margin:0;">
-          <input type="checkbox" id="copyMembersCheckbox" style="accent-color:var(--primary); width:17px; height:17px; margin:0;" onchange="onToggleCopyMembers()" />
+      <div id="copyMembersSection" class="form-group hidden"
+        style="background:#faf6f5; border:1px solid var(--border-color); border-radius:12px; padding:12px;">
+        <label
+          style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color:var(--text-main); cursor:pointer; margin:0;">
+          <input type="checkbox" id="copyMembersCheckbox"
+            style="accent-color:var(--primary); width:17px; height:17px; margin:0;" onchange="onToggleCopyMembers()" />
           <span>直接加入「<span id="copySourceLedgerName" style="color:var(--primary-dark);"></span>」的成員</span>
         </label>
-        <div id="copyMembersListWrap" class="hidden" style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--border-color);">
+        <div id="copyMembersListWrap" class="hidden"
+          style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--border-color);">
           <div style="font-size:12px; color:var(--text-sub); margin-bottom:6px;">
             勾選要一併帶入新帳本的成員（將沿用原帳本暱稱）：
           </div>
@@ -1622,7 +457,8 @@
       </div>
       <div class="form-group">
         <label class="form-label">請輸入 6 碼邀請碼</label>
-        <input type="text" id="joinInviteCodeInput" class="form-control" placeholder="例如：A8K9P2" maxlength="10" style="text-transform:uppercase; letter-spacing:2px; font-weight:700;" />
+        <input type="text" id="joinInviteCodeInput" class="form-control" placeholder="例如：A8K9P2" maxlength="10"
+          style="text-transform:uppercase; letter-spacing:2px; font-weight:700;" />
       </div>
       <div class="modal-actions">
         <button type="button" class="btn-primary" onclick="submitJoinLedger()">
@@ -1643,14 +479,17 @@
         將下方專屬 LIFF 邀請連結傳送給朋友，對方點擊後即可直接加入並共同記帳：
       </p>
       <div class="form-group">
-        <label class="form-label">專屬邀請連結（邀請碼：<span id="modalInviteCodeBadge" style="color:var(--primary-dark);"></span>）</label>
-        <input type="text" id="shareUrlInput" class="form-control" readonly style="background:#faf6f5; font-size:13px;" />
+        <label class="form-label">專屬邀請連結（邀請碼：<span id="modalInviteCodeBadge"
+            style="color:var(--primary-dark);"></span>）</label>
+        <input type="text" id="shareUrlInput" class="form-control" readonly
+          style="background:#faf6f5; font-size:13px;" />
       </div>
       <div class="modal-actions">
         <button type="button" class="btn-secondary" style="flex:1;" onclick="copyInviteUrl()">
           <i class="fa-regular fa-copy"></i> 複製連結
         </button>
-        <button id="btnLineShare" type="button" class="btn-primary hidden" style="flex:1;" onclick="shareViaLinePicker()">
+        <button id="btnLineShare" type="button" class="btn-primary hidden" style="flex:1;"
+          onclick="shareViaLinePicker()">
           <i class="fa-brands fa-line"></i> 傳送給 LINE 好友
         </button>
       </div>
@@ -1668,7 +507,8 @@
         結算後此帳本將立即鎖定為<b>唯讀狀態</b>，所有成員都無法再新增、修改或刪除任何帳務項目，且系統會自動推播結算金額給大家。
       </p>
       <div class="modal-actions">
-        <button type="button" class="btn-secondary" style="flex:1;" onclick="closeModal('confirmSettleModal')">取消</button>
+        <button type="button" class="btn-secondary" style="flex:1;"
+          onclick="closeModal('confirmSettleModal')">取消</button>
         <button type="button" class="btn-danger" style="flex:1;" onclick="executeSettleLedger()">確認結算鎖定</button>
       </div>
     </div>
@@ -1690,7 +530,8 @@
         <input type="text" id="editNicknameInput" class="form-control" placeholder="例如：王小明、阿明" maxlength="15" />
       </div>
       <div class="modal-actions">
-        <button type="button" class="btn-secondary" style="flex:1;" onclick="closeModal('editNicknameModal')">取消</button>
+        <button type="button" class="btn-secondary" style="flex:1;"
+          onclick="closeModal('editNicknameModal')">取消</button>
         <button type="button" class="btn-primary" style="flex:1;" onclick="submitUpdateNickname()">
           <i class="fa-solid fa-check"></i> 儲存暱稱
         </button>
@@ -1710,7 +551,8 @@
         <input type="text" id="renameLedgerInput" class="form-control" placeholder="請輸入新的帳本名稱" maxlength="30" />
       </div>
       <div class="modal-actions">
-        <button type="button" class="btn-secondary" style="flex:1;" onclick="closeModal('renameLedgerModal')">取消</button>
+        <button type="button" class="btn-secondary" style="flex:1;"
+          onclick="closeModal('renameLedgerModal')">取消</button>
         <button type="button" class="btn-primary" style="flex:1;" onclick="submitRenameLedger()">
           <i class="fa-solid fa-check"></i> 儲存名稱
         </button>
@@ -1754,7 +596,8 @@
         <span style="font-size:12px; color:var(--text-sub);">註：為確保分帳金額正確，系統僅允許移除尚未參與任何墊付或均攤項目的成員。</span>
       </p>
       <div class="modal-actions">
-        <button type="button" class="btn-secondary" style="flex:1;" onclick="closeModal('removeMemberModal')">取消</button>
+        <button type="button" class="btn-secondary" style="flex:1;"
+          onclick="closeModal('removeMemberModal')">取消</button>
         <button type="button" class="btn-danger" style="flex:1;" onclick="executeRemoveMember()">確認移除</button>
       </div>
     </div>
@@ -1765,9 +608,11 @@
     <div class="modal-sheet">
       <div class="modal-header">
         <h3>加入帳本「<span id="claimLedgerTitle"></span>」</h3>
-        <button class="close-btn" onclick="closeModal('claimGuestStep1Modal')"><i class="fa-solid fa-xmark"></i></button>
+        <button class="close-btn" onclick="closeModal('claimGuestStep1Modal')"><i
+            class="fa-solid fa-xmark"></i></button>
       </div>
-      <div style="background:#faf6f5; border:1px solid var(--border-color); border-radius:12px; padding:12px; font-size:13px; color:var(--text-sub); line-height:1.55; margin-bottom:14px;">
+      <div
+        style="background:#faf6f5; border:1px solid var(--border-color); border-radius:12px; padding:12px; font-size:13px; color:var(--text-sub); line-height:1.55; margin-bottom:14px;">
         帳本管理者已預先建立以下「未綁定 LINE」的代管名單。<br>
         • 若名單中有你的名字，請點擊對應項目進行<b>認領合併</b>，原本幫你代記的帳務會自動轉入你的帳號。<br>
         • 若名單中<b>沒有你</b>，或你不確定，請直接點選下方「我是新成員」。
@@ -1800,8 +645,10 @@
         <button class="close-btn" onclick="backToClaimStep1()"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <p style="font-size:14px; line-height:1.65; color:var(--text-main); margin-top:0;">
-        你即將認領代管成員「<b id="confirmClaimGuestName" style="color:var(--primary-dark);"></b>」（共 <b id="confirmClaimExpenseCount">0</b> 筆相關帳務）並將所有紀錄合併至你的 LINE 帳號。<br><br>
-        <span style="display:block; background:var(--red-bg); color:var(--red); padding:10px 12px; border-radius:10px; font-size:13px; font-weight:700;">
+        你即將認領代管成員「<b id="confirmClaimGuestName" style="color:var(--primary-dark);"></b>」（共 <b
+          id="confirmClaimExpenseCount">0</b> 筆相關帳務）並將所有紀錄合併至你的 LINE 帳號。<br><br>
+        <span
+          style="display:block; background:var(--red-bg); color:var(--red); padding:10px 12px; border-radius:10px; font-size:13px; font-weight:700;">
           ⚠️ 注意：合併後資料將無法還原，且帳本內顯示名稱會先沿用「<span id="confirmClaimKeepName"></span>」（加入後可隨時自行修改）。
         </span>
       </p>
@@ -1823,19 +670,25 @@
         <h3 class="text-red"><i class="fa-solid fa-triangle-exclamation"></i> 永久刪除記帳本</h3>
         <button class="close-btn" onclick="closeModal('deleteLedgerModal')"><i class="fa-solid fa-xmark"></i></button>
       </div>
-      <div style="background:var(--red-bg); color:var(--red); padding:11px 12px; border-radius:10px; font-size:13px; line-height:1.55; margin-bottom:14px; font-weight:600;">
+      <div
+        style="background:var(--red-bg); color:var(--red); padding:11px 12px; border-radius:10px; font-size:13px; line-height:1.55; margin-bottom:14px; font-weight:600;">
         ⚠️ 警告：執行刪除後，系統將永久清除此記帳本的所有帳務明細、成員名單與結算紀錄，<b>所有資料皆無法復原</b>。
       </div>
       <div class="form-group">
         <label class="form-label" style="display:block; line-height:1.5;">
           請完整輸入下方帳本名稱以確認刪除：<br>
-          <span style="display:inline-block; margin-top:4px; background:#faf6f5; border:1px solid var(--border-color); padding:2px 8px; border-radius:6px; color:var(--text-main); font-size:14px;" id="deleteLedgerTargetTitle"></span>
+          <span
+            style="display:inline-block; margin-top:4px; background:#faf6f5; border:1px solid var(--border-color); padding:2px 8px; border-radius:6px; color:var(--text-main); font-size:14px;"
+            id="deleteLedgerTargetTitle"></span>
         </label>
-        <input type="text" id="deleteLedgerConfirmInput" class="form-control" placeholder="請在此輸入上方的完整帳本名稱" oninput="onDeleteLedgerInputChange()" />
+        <input type="text" id="deleteLedgerConfirmInput" class="form-control" placeholder="請在此輸入上方的完整帳本名稱"
+          oninput="onDeleteLedgerInputChange()" />
       </div>
       <div class="modal-actions">
-        <button type="button" class="btn-secondary" style="flex:1;" onclick="closeModal('deleteLedgerModal')">取消</button>
-        <button id="btnConfirmDeleteLedger" type="button" class="btn-danger" style="flex:1;" disabled onclick="executeDeleteLedger()">
+        <button type="button" class="btn-secondary" style="flex:1;"
+          onclick="closeModal('deleteLedgerModal')">取消</button>
+        <button id="btnConfirmDeleteLedger" type="button" class="btn-danger" style="flex:1;" disabled
+          onclick="executeDeleteLedger()">
           <i class="fa-solid fa-trash-can"></i> 確認永久刪除
         </button>
       </div>
@@ -1849,19 +702,23 @@
         <h3 style="color:#2c66b8;"><i class="fa-solid fa-user-shield"></i> 移交帳本管理者權限</h3>
         <button class="close-btn" onclick="closeModal('transferAdminModal')"><i class="fa-solid fa-xmark"></i></button>
       </div>
-      <div style="background:#fff3cd; color:#664d03; padding:10px 12px; border-radius:10px; font-size:13px; line-height:1.55; margin-bottom:14px;">
+      <div
+        style="background:#fff3cd; color:#664d03; padding:10px 12px; border-radius:10px; font-size:13px; line-height:1.55; margin-bottom:14px;">
         ⚠️ 移交完成後，你將<b>立即失去帳本管理者權限</b>（無法再執行結算、修改他人暱稱、移除成員或刪除帳本），系統會自動透過 LINE 通知接替的成員。
       </div>
       <div id="transferAdminFormWrap" class="form-group">
         <label class="form-label">選擇接替的帳本管理者（僅顯示已綁定 LINE 成員）</label>
         <select id="transferAdminSelect" class="form-control"></select>
       </div>
-      <div id="transferAdminEmptyHint" class="hidden" style="background:#faf6f5; border:1px solid var(--border-color); border-radius:10px; padding:12px; font-size:13px; color:var(--text-sub); line-height:1.5; margin-bottom:14px;">
+      <div id="transferAdminEmptyHint" class="hidden"
+        style="background:#faf6f5; border:1px solid var(--border-color); border-radius:10px; padding:12px; font-size:13px; color:var(--text-sub); line-height:1.5; margin-bottom:14px;">
         目前帳本中沒有其他已綁定 LINE 帳號的成員可以接替（未綁定的代管成員無法擔任帳本管理者）。
       </div>
       <div class="modal-actions">
-        <button type="button" class="btn-secondary" style="flex:1;" onclick="closeModal('transferAdminModal')">取消</button>
-        <button id="btnConfirmTransferAdmin" type="button" class="btn-primary" style="flex:1; background:#2c66b8; box-shadow:none;" onclick="executeTransferAdmin()">
+        <button type="button" class="btn-secondary" style="flex:1;"
+          onclick="closeModal('transferAdminModal')">取消</button>
+        <button id="btnConfirmTransferAdmin" type="button" class="btn-primary"
+          style="flex:1; background:#2c66b8; box-shadow:none;" onclick="executeTransferAdmin()">
           <i class="fa-solid fa-check"></i> 確認移交權限
         </button>
       </div>
@@ -1878,10 +735,12 @@
 
       <div class="faq-search-wrap">
         <i class="fa-solid fa-magnifying-glass"></i>
-        <input type="text" id="faqSearchInput" class="faq-search-input" placeholder="搜尋關鍵字（例如：贊助、補助、定期、代管、編號、管理者）" oninput="filterFaqItems()" />
+        <input type="text" id="faqSearchInput" class="faq-search-input" placeholder="搜尋關鍵字（例如：贊助、補助、定期、代管、編號、管理者）"
+          oninput="filterFaqItems()" />
       </div>
 
-      <div id="faqEmptyNotice" class="hidden" style="text-align:center; padding:24px 0; color:var(--text-sub); font-size:13px;">
+      <div id="faqEmptyNotice" class="hidden"
+        style="text-align:center; padding:24px 0; color:var(--text-sub); font-size:13px;">
         找不到符合的說明項目，請嘗試其他關鍵字。
       </div>
 
@@ -1896,7 +755,8 @@
               <i class="fa-solid fa-chevron-down faq-chevron"></i>
             </summary>
             <div class="faq-a">
-              點擊頂部 <b>「建立」</b> 輸入帳本名稱即可開帳並成為該帳本的 <b>帳本管理者</b>。帳本進行中時，所有成員都可以在主卡片下方看到 <b>6 碼邀請碼</b>，點擊 <b>「邀請朋友」</b> 即可複製專屬連結或透過 LINE 好友選單傳送；朋友點擊連結或輸入邀請碼即可加入。
+              點擊頂部 <b>「建立」</b> 輸入帳本名稱即可開帳並成為該帳本的 <b>帳本管理者</b>。帳本進行中時，所有成員都可以在主卡片下方看到 <b>6 碼邀請碼</b>，點擊 <b>「邀請朋友」</b>
+              即可複製專屬連結或透過 LINE 好友選單傳送；朋友點擊連結或輸入邀請碼即可加入。
             </div>
           </details>
 
@@ -1918,7 +778,8 @@
               <i class="fa-solid fa-chevron-down faq-chevron"></i>
             </summary>
             <div class="faq-a">
-              未加好友仍可正常開啟網頁記帳；但加入官方帳號好友後，才能在<b>正式結算</b>、<b>被加入新帳本</b>或<b>接任帳本管理者</b>時收到 LINE 推播通知，也能直接在 LINE 聊天室輸入文字快速記帳、帶入定期支出與查詢個人明細。
+              未加好友仍可正常開啟網頁記帳；但加入官方帳號好友後，才能在<b>正式結算</b>、<b>被加入新帳本</b>或<b>接任帳本管理者</b>時收到 LINE 推播通知，也能直接在 LINE
+              聊天室輸入文字快速記帳、帶入定期支出與查詢個人明細。
             </div>
           </details>
         </div>
@@ -1933,7 +794,8 @@
               <i class="fa-solid fa-chevron-down faq-chevron"></i>
             </summary>
             <div class="faq-a">
-              帳本管理者可點擊主卡片下方的 <b>「代管成員」</b>，輸入暱稱（例如：阿公、不記帳的小美）建立 <span class="guest-badge" style="margin-left:0;">未綁定</span> 成員。代管成員一樣可作為墊付人、補助提供人或均攤／受惠對象參與結算，日後對方若加入帳本也能隨時認領合併。
+              帳本管理者可點擊主卡片下方的 <b>「代管成員」</b>，輸入暱稱（例如：阿公、不記帳的小美）建立 <span class="guest-badge"
+                style="margin-left:0;">未綁定</span> 成員。代管成員一樣可作為墊付人、補助提供人或均攤／受惠對象參與結算，日後對方若加入帳本也能隨時認領合併。
             </div>
           </details>
 
@@ -1943,7 +805,8 @@
               <i class="fa-solid fa-chevron-down faq-chevron"></i>
             </summary>
             <div class="faq-a">
-              只要帳本狀態為 <b>「進行中」</b>，所有成員皆可至 <b>「帳務明細」</b> 分頁點擊項目右側的 <b>「編輯」</b> 修改類型、名稱、金額、墊付／提供人或分攤名單，也可刪除該筆項目。一旦帳本管理者執行「正式結算」後，帳本即鎖定為唯讀。
+              只要帳本狀態為 <b>「進行中」</b>，所有成員皆可至 <b>「帳務明細」</b> 分頁點擊項目右側的 <b>「編輯」</b>
+              修改類型、名稱、金額、墊付／提供人或分攤名單，也可刪除該筆項目。一旦帳本管理者執行「正式結算」後，帳本即鎖定為唯讀。
             </div>
           </details>
 
@@ -1953,7 +816,8 @@
               <i class="fa-solid fa-chevron-down faq-chevron"></i>
             </summary>
             <div class="faq-a">
-              點擊主卡片上「我的暱稱」旁的 <b>「改名」</b>，即可設定專屬於目前帳本的顯示名稱；<b>帳本管理者</b>則可在 <b>「結算總覽」</b> 的成員統計表中，點擊任一位成員（包含代管成員）旁的鉛筆圖示協助修改暱稱。
+              點擊主卡片上「我的暱稱」旁的 <b>「改名」</b>，即可設定專屬於目前帳本的顯示名稱；<b>帳本管理者</b>則可在 <b>「結算總覽」</b>
+              的成員統計表中，點擊任一位成員（包含代管成員）旁的鉛筆圖示協助修改暱稱。
             </div>
           </details>
 
@@ -1964,8 +828,10 @@
             </summary>
             <div class="faq-a">
               適合「有人領取補助款或自掏腰包贊助大家花費」（如旅遊補助、長輩贊助金、刷卡回饋）的情境。點擊「新增帳務項目」後，將頂部類型切換為 <b>「🎁 贊助／補助款」</b> 即可輸入：<br>
-              • <b>情境 1（平分外部補助）</b>：A 領取 $3,000 旅遊補助，受惠成員勾選 <b>A、B、C</b> 三人 ➔ 每人各折抵 $1,000；A 負責拿出 $3,000 扣掉自己折抵的 $1,000，補助淨額為 <span class="faq-code">-$2,000</span>，B 與 C 各為 <span class="faq-code">+$1,000</span>。<br>
-              • <b>情境 2（個人純贊助他人）</b>：A 自掏腰包贊助 $3,000，受惠成員<b>取消勾選 A</b>、只勾 <b>B、C</b> ➔ A 補助淨額為 <span class="faq-code">-$3,000</span>，B 與 C 各折抵 <span class="faq-code">+$1,500</span>。<br>
+              • <b>情境 1（平分外部補助）</b>：A 領取 $3,000 旅遊補助，受惠成員勾選 <b>A、B、C</b> 三人 ➔ 每人各折抵 $1,000；A 負責拿出 $3,000 扣掉自己折抵的
+              $1,000，補助淨額為 <span class="faq-code">-$2,000</span>，B 與 C 各為 <span class="faq-code">+$1,000</span>。<br>
+              • <b>情境 2（個人純贊助他人）</b>：A 自掏腰包贊助 $3,000，受惠成員<b>取消勾選 A</b>、只勾 <b>B、C</b> ➔ A 補助淨額為 <span
+                class="faq-code">-$3,000</span>，B 與 C 各折抵 <span class="faq-code">+$1,500</span>。<br>
               • 帳本含贊助／補助款時，「結算總覽」會自動展開 <b>「贊助／補助」</b> 欄位，讓 <span class="faq-code">已預付 - 應均攤 + 贊助／補助 = 淨額</span> 清楚透明。
             </div>
           </details>
@@ -1977,7 +843,8 @@
             </summary>
             <div class="faq-a">
               定期支出範本綁定你的個人 LINE 帳號，<b>跨所有帳本皆可共用</b>（適合每月固定訂閱費、會員費）：<br>
-              • <b>建立與管理</b>：可從 <b>「我的明細 ➔ 定期支出設定」</b> 新增，或在新增一般支出時勾選 <b>「同時儲存為我的定期支出範本」</b>。金額可填 <span class="faq-code">0</span> 代表浮動帳單（如水電費），也可設定每月扣款日（1～31 號）。<br>
+              • <b>建立與管理</b>：可從 <b>「我的明細 ➔ 定期支出設定」</b> 新增，或在新增一般支出時勾選 <b>「同時儲存為我的定期支出範本」</b>。金額可填 <span
+                class="faq-code">0</span> 代表浮動帳單（如水電費），也可設定每月扣款日（1～31 號）。<br>
               • <b>均攤記憶與待入帳提醒</b>：範本僅記憶<b>已綁定 LINE</b> 的成員以確保跨帳本精準對應（未綁定代管成員可於帶入時再手動勾選）；系統會自動比對目前帳本，尚未入帳的項目會在帳務頁頂部提示。
             </div>
           </details>
@@ -1993,7 +860,8 @@
               <i class="fa-solid fa-chevron-down faq-chevron"></i>
             </summary>
             <div class="faq-a">
-              • <b>自由輸入</b>：在聊天室直接輸入 <span class="faq-code">項目 金額</span>（例如：<span class="faq-code">晚餐 600</span>）。（註：聊天室快記以一般支出為主，贊助／補助款請開啟網頁切換類型輸入。）<br>
+              • <b>自由輸入</b>：在聊天室直接輸入 <span class="faq-code">項目 金額</span>（例如：<span class="faq-code">晚餐
+                600</span>）。（註：聊天室快記以一般支出為主，贊助／補助款請開啟網頁切換類型輸入。）<br>
               • <b>定期支出帶入</b>：輸入 <span class="faq-code">定期</span>（或點擊快捷列「定期支出」）可查看個人定期清單與待入帳狀態，點擊固定金額項目即可直接產生草稿。<br>
               • <b>草稿防呆</b>：系統會先回傳 <b>「草稿確認卡」</b> 讓你核對目標帳本與金額，按下 <b>「✅ 確認入帳」</b> 才會正式儲存。
             </div>
@@ -2001,14 +869,14 @@
 
           <details class="faq-item">
             <summary class="faq-q">
-              <span>10. 聊天室記帳如何指定墊付與均攤？成員編號去哪看？</span>
+              <span>10. 聊天室記帳如何指定帳本、墊付與均攤？編號去哪看？</span>
               <i class="fa-solid fa-chevron-down faq-chevron"></i>
             </summary>
             <div class="faq-a">
-              在金額後方加上 <span class="faq-code">@墊付編號</span> 與 <span class="faq-code">/均攤編號</span>（例如：<span class="faq-code">晚餐 600 @3 /1 2</span>）：<br>
-              • 省略 <span class="faq-code">@</span> 預設由你墊付；省略 <span class="faq-code">/</span> 預設全員均攤。<br>
-              • 點擊聊天室快捷列的 <b>「快速記帳說明」</b>（或輸入 <span class="faq-code">記帳說明</span>）即可查看目前預設帳本與每位成員的對應編號。<br>
-              • 支援<b>換行一次輸入多筆花費</b>（單次最多 15 筆）。
+              完整格式為 <span class="faq-code">#帳本編號 項目 金額 @墊付編號 /均攤編號</span>（例如：<span class="faq-code">#2 晚餐 600 @3 /1 2</span>，符號皆可省略）：<br>
+              • <b>智慧預設</b>：省略 <span class="faq-code">#</span> 預設寫入目前預設帳本（寫在開頭或句尾皆可）；省略 <span class="faq-code">@</span> 預設由你墊付；省略 <span class="faq-code">/</span> 預設全員均攤。<br>
+              • <b>查詢編號</b>：點擊聊天室快捷列的 <b>「帳本與成員編號」</b>（或輸入 <span class="faq-code">編號</span>）即可一次查看所有進行中帳本與各帳本成員的對應編號；點擊 <b>「快速記帳說明」</b> 則可查看詳細指令與範例。<br>
+              • <b>多筆輸入</b>：支援<b>換行一次輸入多筆花費</b>（最多 15 筆），可於第一行單獨輸入 <span class="faq-code">#2</span> 指定整批寫入同一本帳本。
             </div>
           </details>
 
@@ -2018,7 +886,8 @@
               <i class="fa-solid fa-chevron-down faq-chevron"></i>
             </summary>
             <div class="faq-a">
-              LINE 電腦版原生不支援顯示下方圖文選單，只要在聊天室輸入 <span class="faq-code">選單</span> 或 <span class="faq-code">?</span>，機器人就會回傳功能按鈕卡片並在輸入框上方重新喚出快捷按鈕列。
+              LINE 電腦版原生不支援顯示下方圖文選單，只要在聊天室輸入 <span class="faq-code">選單</span> 或 <span
+                class="faq-code">?</span>，機器人就會回傳功能按鈕卡片並在輸入框上方重新喚出快捷按鈕列。
             </div>
           </details>
         </div>
@@ -2044,7 +913,8 @@
             </summary>
             <div class="faq-a">
               • <b>正式結算</b>：帳本管理者可在 <b>「結算總覽」</b> 點擊「正式結算並鎖定帳本」，鎖定後全員變為唯讀並自動收到 LINE 結算通知。<br>
-              • <b>保存與分享</b>：所有成員隨時都可在「結算總覽」點擊 <b>「複製文字」</b> 貼到 LINE 群組，或點 <b>「匯出 CSV」</b> 下載 Excel 檔案保存（含一般支出與贊助／補助款明細）。
+              • <b>保存與分享</b>：所有成員隨時都可在「結算總覽」點擊 <b>「複製文字」</b> 貼到 LINE 群組，或點 <b>「匯出 CSV」</b> 下載 Excel
+              檔案保存（含一般支出與贊助／補助款明細）。
             </div>
           </details>
 
@@ -2073,7 +943,8 @@
     <div class="modal-sheet">
       <div class="modal-header">
         <h3><i class="fa-solid fa-repeat" style="color:var(--primary);"></i> 我的定期支出項目</h3>
-        <button class="close-btn" onclick="closeModal('recurringManageModal')"><i class="fa-solid fa-xmark"></i></button>
+        <button class="close-btn" onclick="closeModal('recurringManageModal')"><i
+            class="fa-solid fa-xmark"></i></button>
       </div>
       <p style="font-size:12.5px; color:var(--text-sub); margin-top:0; line-height:1.5;">
         設定個人固定開銷（如影音訂閱、會員費），跨所有帳本皆可快速帶入，並自動比對目前帳本是否已入帳。
@@ -2100,24 +971,28 @@
 
       <div class="form-group">
         <label class="form-label">項目名稱</label>
-        <input type="text" id="tplItemName" class="form-control" placeholder="例如：Netflix、YouTube Premium、Costco會費" maxlength="40" />
+        <input type="text" id="tplItemName" class="form-control" placeholder="例如：Netflix、YouTube Premium、Costco會費"
+          maxlength="40" />
       </div>
 
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
         <div class="form-group">
           <label class="form-label">預設金額（可填 0）</label>
-          <input type="number" id="tplAmount" class="form-control" inputmode="decimal" placeholder="填 0 代表浮動金額" min="0" step="any" />
+          <input type="number" id="tplAmount" class="form-control" inputmode="decimal" placeholder="填 0 代表浮動金額" min="0"
+            step="any" />
         </div>
         <div class="form-group">
           <label class="form-label">每月扣款日（選填）</label>
-          <input type="number" id="tplBillingDay" class="form-control" inputmode="numeric" placeholder="1～31 號" min="1" max="31" />
+          <input type="number" id="tplBillingDay" class="form-control" inputmode="numeric" placeholder="1～31 號" min="1"
+            max="31" />
         </div>
       </div>
 
       <div class="form-group">
         <div class="form-label">
           <span>預設均攤成員（跨帳本自動對應）</span>
-          <button type="button" class="icon-btn" style="padding:3px 8px; font-size:12px;" onclick="toggleSelectAllTplSplit()">
+          <button type="button" class="icon-btn" style="padding:3px 8px; font-size:12px;"
+            onclick="toggleSelectAllTplSplit()">
             全選 / 取消
           </button>
         </div>
@@ -2149,8 +1024,10 @@
         <span style="font-size:12px; color:var(--text-sub);">（不會影響已經寫入各帳本的歷史帳務紀錄）</span>
       </p>
       <div class="modal-actions">
-        <button type="button" class="btn-secondary" style="flex:1;" onclick="backToRecurringManageFromDelete()">取消</button>
-        <button type="button" class="btn-danger" style="flex:1;" onclick="executeDeleteRecurringTemplate()">確認刪除</button>
+        <button type="button" class="btn-secondary" style="flex:1;"
+          onclick="backToRecurringManageFromDelete()">取消</button>
+        <button type="button" class="btn-danger" style="flex:1;"
+          onclick="executeDeleteRecurringTemplate()">確認刪除</button>
       </div>
     </div>
   </div>
@@ -2167,7 +1044,8 @@
         <button type="button" id="logFilterAll" class="log-filter-btn active" onclick="switchActivityLogFilter('ALL')">
           全部歷程
         </button>
-        <button type="button" id="logFilterModify" class="log-filter-btn" onclick="switchActivityLogFilter('MODIFY_ONLY')">
+        <button type="button" id="logFilterModify" class="log-filter-btn"
+          onclick="switchActivityLogFilter('MODIFY_ONLY')">
           僅看修改／刪除
         </button>
       </div>
@@ -2175,11 +1053,13 @@
       <div id="activityLogCountHint" style="font-size:12px; color:var(--text-sub); margin-bottom:10px;"></div>
       <div id="activityLogList"></div>
 
-      <div id="activityLogLoading" class="hidden" style="text-align:center; padding:16px 0; color:var(--text-sub); font-size:13px;">
+      <div id="activityLogLoading" class="hidden"
+        style="text-align:center; padding:16px 0; color:var(--text-sub); font-size:13px;">
         <i class="fa-solid fa-spinner fa-spin"></i> 正在載入歷程紀錄...
       </div>
 
-      <button id="btnLoadMoreLogs" type="button" class="btn-secondary hidden" style="width:100%; margin-top:4px;" onclick="loadMoreActivityLogs()">
+      <button id="btnLoadMoreLogs" type="button" class="btn-secondary hidden" style="width:100%; margin-top:4px;"
+        onclick="loadMoreActivityLogs()">
         <i class="fa-solid fa-angles-down"></i> 載入更早紀錄
       </button>
 
@@ -2189,1954 +1069,7 @@
     </div>
   </div>
 
-  <script>
-    // =========================================================================
-    // 請填入你的正式 LINE LIFF ID、GAS 部署網址 (/exec 結尾) 與官方帳號加好友網址
-    // =========================================================================
-    const LIFF_ID = "2012687270-krKUpomw";
-    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyK9l3YGWPuKE9uGLM2TlxwQy0C1nQxQCii79esd2uYFvyt5imgzenyLKWiBaws_HAw/exec";
-    const OA_ADD_FRIEND_URL = "https://line.me/R/ti/p/@184ibjmd";
-
-    const ENABLE_MOCK_MODE = false;
-    let isMockMode = false;
-
-    let currentUser = null;
-    let appState = null;
-    let currentTab = 'expenses';
-    let pendingInviteChoiceData = null;
-    let selectedClaimGuest = null;
-    let pendingPrefillDraft = null;
-    let reopenRecurringManage = false;
-
-    function getCombinedSearchParams() {
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('liff.state')) {
-        const stateStr = urlParams.get('liff.state');
-        const cleanState = stateStr.indexOf('?') === 0 ? stateStr.slice(1) : stateStr;
-        const stateParams = new URLSearchParams(cleanState);
-        stateParams.forEach((val, key) => {
-          if (!urlParams.has(key)) urlParams.set(key, val);
-        });
-      }
-      return urlParams;
-    }
-
-    function extractInviteCodeFromUrl() {
-      const params = getCombinedSearchParams();
-      const code = params.get('invite');
-      return code ? code.trim().toUpperCase() : '';
-    }
-
-    function extractPrefillFromUrl() {
-      const params = getCombinedSearchParams();
-      const item = params.get('prefill_item');
-      const amt = params.get('prefill_amt');
-      if (!item || !amt) return null;
-
-      return {
-        ledgerId: params.get('prefill_ledger') || '',
-        itemName: item,
-        amount: Number(amt),
-        payerId: params.get('prefill_payer') || '',
-        splitUsers: params.get('prefill_splits') ? params.get('prefill_splits').split(',').filter(Boolean) : []
-      };
-    }
-
-    // =========================================================================
-    // 1. 初始化 LINE LIFF 與官方帳號好友狀態偵測
-    // =========================================================================
-    (async function initLiffApp() {
-      try {
-        const urlParams = new URLSearchParams(window.location.search);
-        const mockUserId = urlParams.get('mock_user');
-        const mockUserName = urlParams.get('mock_name') || '測試成員';
-        const incomingInvite = extractInviteCodeFromUrl();
-        const incomingPrefill = extractPrefillFromUrl();
-
-        // 【分支 A：模擬測試模式（正式上線時已透過 ENABLE_MOCK_MODE = false 停用）】
-        if (ENABLE_MOCK_MODE && mockUserId) {
-          isMockMode = true;
-          currentUser = {
-            userId: mockUserId,
-            displayName: mockUserName
-          };
-          if (incomingPrefill) {
-            pendingPrefillDraft = incomingPrefill;
-          }
-
-          const banner = document.createElement('div');
-          banner.style.cssText = 'background:#3d2c27; color:#fcecef; font-size:12px; text-align:center; padding:6px; font-weight:700;';
-          banner.textContent = '🧪 模擬測試模式｜目前角色：' + mockUserName + ' (' + mockUserId + ')';
-          document.body.insertBefore(banner, document.body.firstChild);
-
-          if ((incomingInvite || incomingPrefill) && window.history && window.history.replaceState) {
-            ['invite', 'prefill_ledger', 'prefill_item', 'prefill_amt', 'prefill_payer', 'prefill_splits'].forEach(k => urlParams.delete(k));
-            const remainQuery = urlParams.toString();
-            const cleanMockUrl = window.location.pathname + (remainQuery ? '?' + remainQuery : '');
-            window.history.replaceState({}, document.title, cleanMockUrl);
-          }
-
-          document.getElementById('topControlBar').classList.remove('hidden');
-          await callGasApi('bootstrap', {
-            userProfile: currentUser,
-            inviteCode: incomingInvite
-          }, '正在載入模擬帳號資料...');
-          return;
-        }
-
-        // 【分支 B：正式 LINE LIFF 模式】
-        if (incomingInvite) {
-          localStorage.setItem('pending_invite_code', incomingInvite);
-        }
-        if (incomingPrefill) {
-          localStorage.setItem('pending_prefill_draft', JSON.stringify(incomingPrefill));
-        }
-
-        await liff.init({ liffId: LIFF_ID });
-
-        const postInitInvite = extractInviteCodeFromUrl();
-        if (postInitInvite) {
-          localStorage.setItem('pending_invite_code', postInitInvite);
-        }
-        const postInitPrefill = extractPrefillFromUrl();
-        if (postInitPrefill) {
-          localStorage.setItem('pending_prefill_draft', JSON.stringify(postInitPrefill));
-        }
-
-        if (!liff.isLoggedIn()) {
-          liff.login();
-          return;
-        }
-
-        const profile = await liff.getProfile();
-        currentUser = {
-          userId: profile.userId,
-          displayName: profile.displayName
-        };
-
-        checkOfficialAccountFriendship();
-
-        const finalInviteCode = localStorage.getItem('pending_invite_code') || '';
-        if (finalInviteCode) {
-          localStorage.removeItem('pending_invite_code');
-        }
-
-        const savedPrefillRaw = localStorage.getItem('pending_prefill_draft');
-        if (savedPrefillRaw) {
-          localStorage.removeItem('pending_prefill_draft');
-          try {
-            pendingPrefillDraft = JSON.parse(savedPrefillRaw);
-          } catch (e) {}
-        }
-
-        if (window.history && window.history.replaceState) {
-          window.history.replaceState({}, document.title, window.location.pathname);
-        }
-
-        document.getElementById('topControlBar').classList.remove('hidden');
-        await callGasApi('bootstrap', {
-          userProfile: currentUser,
-          inviteCode: finalInviteCode
-        }, '正在載入帳本資料...');
-      } catch (err) {
-        document.getElementById('loadingText').innerHTML =
-          '<div style="padding:0 24px; text-align:center; color:#d64545; line-height:1.6;">' +
-          '初始化失敗：' + escapeHtml(err.message || String(err)) +
-          '</div>';
-      }
-    })();
-
-    async function checkOfficialAccountFriendship() {
-      if (isMockMode || typeof liff === 'undefined' || !liff.isLoggedIn || !liff.isLoggedIn()) return;
-      try {
-        const friendship = await liff.getFriendship();
-        const bannerEl = document.getElementById('addFriendBanner');
-        if (friendship && friendship.friendFlag === false) {
-          bannerEl.classList.remove('hidden');
-        } else {
-          bannerEl.classList.add('hidden');
-        }
-      } catch (err) {
-        console.warn('無法取得官方帳號好友狀態:', err.message);
-      }
-    }
-
-    function openAddOfficialAccount() {
-      if (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient()) {
-        liff.openWindow({ url: OA_ADD_FRIEND_URL, external: false });
-      } else {
-        window.open(OA_ADD_FRIEND_URL, '_blank');
-      }
-    }
-
-    document.addEventListener('visibilitychange', function () {
-      if (document.visibilityState === 'visible' && currentUser) {
-        checkOfficialAccountFriendship();
-      }
-    });
-
-    // =========================================================================
-    // 2. 透過 fetch 呼叫 GAS 純 JSON API
-    // =========================================================================
-    async function callGasApi(action, payloadObj, loadingMsg) {
-      showLoading(loadingMsg || '處理中...');
-      try {
-        const response = await fetch(GAS_API_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'text/plain;charset=utf-8'
-          },
-          body: JSON.stringify(Object.assign({ api_action: action }, payloadObj))
-        });
-
-        if (!response.ok) {
-          throw new Error('伺服器連線異常 (HTTP ' + response.status + ')');
-        }
-
-        const json = await response.json();
-        if (!json.ok) {
-          throw new Error(json.error || '操作失敗');
-        }
-
-        hideLoading();
-        renderAppState(json.data);
-        if (reopenRecurringManage) {
-          reopenRecurringManage = false;
-          openRecurringManageModal();
-        }
-      } catch (err) {
-        hideLoading();
-        showToast(err.message || '網路連線發生錯誤，請稍後再試', 4500);
-      }
-    }
-
-    // =========================================================================
-    // 3. 主畫面資料渲染
-    // =========================================================================
-    function renderAppState(state) {
-      appState = state;
-      if (state.toastMessage) {
-        showToast(state.toastMessage);
-      }
-
-      if (state.pendingInviteChoice) {
-        openClaimStep1Modal(state.pendingInviteChoice);
-      }
-
-      const selectEl = document.getElementById('ledgerSelect');
-      selectEl.innerHTML = '';
-      if (!state.ledgers || state.ledgers.length === 0) {
-        selectEl.innerHTML = '<option value="">尚未加入任何帳本</option>';
-        document.getElementById('emptyStateView').classList.remove('hidden');
-        document.getElementById('mainDashboardView').classList.add('hidden');
-        document.getElementById('fabAddExpense').classList.add('hidden');
-        return;
-      }
-
-      state.ledgers.forEach(function (l) {
-        const opt = document.createElement('option');
-        opt.value = l.ledger_id;
-        const prefix = l.status === 'SETTLED' ? '🔒 ' : (l.isCreator ? '👑 ' : '');
-        opt.textContent = prefix + l.title;
-        if (l.ledger_id === state.activeLedgerId) opt.selected = true;
-        selectEl.appendChild(opt);
-      });
-
-      const data = state.activeLedgerData;
-      if (!data) return;
-
-      document.getElementById('emptyStateView').classList.add('hidden');
-      document.getElementById('mainDashboardView').classList.remove('hidden');
-
-      const ledger = data.ledger;
-      const perm = data.permissions;
-      const personal = data.personal;
-
-      const titleEl = document.getElementById('ledgerTitle');
-      if (perm.canRenameLedger) {
-        titleEl.innerHTML = escapeHtml(ledger.title) +
-          '<button type="button" class="edit-link" style="margin-top:0; margin-left:8px; padding:2px 8px; vertical-align:middle;" onclick="openRenameLedgerModal()" title="編輯帳本名稱">' +
-          '<i class="fa-solid fa-pen"></i></button>';
-      } else {
-        titleEl.textContent = ledger.title;
-      }
-
-      document.getElementById('ledgerMeta').innerHTML =
-        '成員 ' + data.members.length + ' 人・我的暱稱：<b>' + escapeHtml(personal.nickname) + '</b>' +
-        '<button type="button" class="edit-link" style="margin-top:0; margin-left:6px; padding:2px 7px;" onclick="openNicknameModal(\'' + currentUser.userId + '\')">' +
-        '<i class="fa-solid fa-pen"></i> 改名</button>';
-
-      const badge = document.getElementById('ledgerStatusBadge');
-      if (perm.isSettled) {
-        badge.className = 'status-badge status-settled';
-        badge.innerHTML = '<i class="fa-solid fa-lock"></i> 已結算鎖定';
-      } else {
-        badge.className = 'status-badge status-active';
-        badge.innerHTML = '<i class="fa-solid fa-circle-play"></i> 進行中';
-      }
-
-      document.getElementById('ledgerTotalAmount').textContent = formatMoney(ledger.totalAmount);
-
-      const heroSubEl = document.getElementById('heroSubsidySub');
-      if (ledger.hasSubsidy) {
-        heroSubEl.textContent = '含贊助／補助折抵 -$' + ledger.totalSubsidy.toLocaleString();
-        heroSubEl.classList.remove('hidden');
-      } else {
-        heroSubEl.classList.add('hidden');
-      }
-
-      const heroNetEl = document.getElementById('heroMyNet');
-      heroNetEl.textContent = formatNetMoney(personal.netBalance);
-      heroNetEl.className = personal.netBalance > 0 ? 'text-green' : (personal.netBalance < 0 ? 'text-red' : '');
-
-      const inviteBar = document.getElementById('creatorInviteBar');
-      if (perm.canInvite) {
-        inviteBar.classList.remove('hidden');
-        document.getElementById('inviteCodeText').textContent = ledger.invite_code;
-      } else {
-        inviteBar.classList.add('hidden');
-      }
-
-      const addGuestBtn = document.getElementById('btnAddGuest');
-      if (perm.canAddGuest) {
-        addGuestBtn.classList.remove('hidden');
-      } else {
-        addGuestBtn.classList.add('hidden');
-      }
-
-      if (perm.canEdit) {
-        document.getElementById('fabAddExpense').classList.remove('hidden');
-        document.getElementById('readOnlyHint').classList.add('hidden');
-      } else {
-        document.getElementById('fabAddExpense').classList.add('hidden');
-        document.getElementById('readOnlyHint').classList.remove('hidden');
-      }
-
-      if (perm.canSettle) {
-        document.getElementById('creatorSettleCard').classList.remove('hidden');
-      } else {
-        document.getElementById('creatorSettleCard').classList.add('hidden');
-      }
-
-      if (perm.canTransferAdmin) {
-        document.getElementById('creatorTransferAdminCard').classList.remove('hidden');
-      } else {
-        document.getElementById('creatorTransferAdminCard').classList.add('hidden');
-      }
-
-      if (perm.canDeleteLedger) {
-        document.getElementById('creatorDeleteLedgerCard').classList.remove('hidden');
-      } else {
-        document.getElementById('creatorDeleteLedgerCard').classList.add('hidden');
-      }
-
-      renderExpensesTab(data);
-      renderPersonalTab(data);
-      renderSettlementTab(data);
-
-      // 渲染分頁 1 頂部的「定期支出待入帳提醒條」
-      const pendingList = getEnrichedRecurringTemplates().filter(function (t) { return !t.isLoggedInActive; });
-      const alertBar = document.getElementById('pendingRecurringBanner');
-      if (perm.canEdit && pendingList.length > 0) {
-        const previewNames = pendingList.slice(0, 2).map(function (t) { return t.item_name; }).join('、');
-        const moreSuffix = pendingList.length > 2 ? ' 等 ' + pendingList.length + ' 筆' : '（共 ' + pendingList.length + ' 筆）';
-        document.getElementById('pendingRecurringText').innerHTML =
-          '定期支出待入帳：<b>' + escapeHtml(previewNames) + '</b>' + moreSuffix;
-        alertBar.classList.remove('hidden');
-      } else {
-        alertBar.classList.add('hidden');
-      }
-
-      if (pendingPrefillDraft) {
-        const draftToApply = pendingPrefillDraft;
-        if (draftToApply.ledgerId && draftToApply.ledgerId !== state.activeLedgerId) {
-          const existsInUserLedgers = state.ledgers.some(l => l.ledger_id === draftToApply.ledgerId);
-          if (existsInUserLedgers) {
-            callGasApi('switchLedger', { userId: currentUser.userId, ledgerId: draftToApply.ledgerId }, '正在切換至草稿目標帳本...');
-            return;
-          }
-        }
-
-        pendingPrefillDraft = null;
-        if (perm.canEdit) {
-          openExpenseModal(null, draftToApply);
-          showToast('已帶入聊天室草稿，請確認均攤成員後儲存');
-        } else {
-          showToast('此帳本已結算鎖定，無法新增帳務');
-        }
-      }
-    }
-
-    function renderExpensesTab(data) {
-      const list = data.expenses || [];
-      document.getElementById('expenseCount').textContent = list.length;
-      const container = document.getElementById('expenseListContainer');
-
-      if (list.length === 0) {
-        container.innerHTML = '<div style="text-align:center; padding:24px 0; color:var(--text-sub); font-size:13px;">' +
-          '目前還沒有任何帳務紀錄，點擊下方「新增帳務項目」開始吧！</div>';
-        return;
-      }
-
-      container.innerHTML = list.map(function (exp) {
-        const isSubsidy = exp.record_type === 'SUBSIDY';
-        const perShare = exp.split_users.length > 0
-          ? Math.round((exp.amount / exp.split_users.length) * 10) / 10
-          : 0;
-        const editBtnHtml = data.permissions.canEdit
-          ? '<button class="edit-link" onclick="openExpenseModal(\'' + exp.expense_id + '\')"><i class="fa-solid fa-pen"></i> 編輯</button>'
-          : '';
-
-        if (isSubsidy) {
-          return '<div class="expense-item is-subsidy">' +
-            '<div class="expense-main">' +
-            '<div class="expense-title"><i class="fa-solid fa-gift" style="color:var(--green); margin-right:4px;"></i>' + escapeHtml(exp.item_name) + '</div>' +
-            '<div class="expense-sub">' +
-            '<span class="subsidy-tag">' + escapeHtml(exp.payerName) + ' 贊助／補助</span>' +
-            '受惠 (' + exp.splitNames.length + '人)：' + escapeHtml(exp.splitNames.join('、')) +
-            '<br><span style="font-size:11px; opacity:0.85;">每人折抵 $' + perShare.toLocaleString() + '・' + escapeHtml(exp.created_at) + '</span>' +
-            '</div></div>' +
-            '<div class="expense-right">' +
-            '<div class="expense-amount text-green">折抵 -' + formatMoney(exp.amount) + '</div>' +
-            editBtnHtml +
-            '</div></div>';
-        }
-
-        return '<div class="expense-item">' +
-          '<div class="expense-main">' +
-          '<div class="expense-title">' + escapeHtml(exp.item_name) + '</div>' +
-          '<div class="expense-sub">' +
-          '<span class="payer-tag">' + escapeHtml(exp.payerName) + ' 預付</span>' +
-          '均攤 (' + exp.splitNames.length + '人)：' + escapeHtml(exp.splitNames.join('、')) +
-          '<br><span style="font-size:11px; opacity:0.85;">每人約 $' + perShare.toLocaleString() + '・' + escapeHtml(exp.created_at) + '</span>' +
-          '</div></div>' +
-          '<div class="expense-right">' +
-          '<div class="expense-amount">' + formatMoney(exp.amount) + '</div>' +
-          editBtnHtml +
-          '</div></div>';
-      }).join('');
-    }
-
-    function renderPersonalTab(data) {
-      const p = data.personal;
-      const hasSubsidy = Boolean(data.ledger && data.ledger.hasSubsidy);
-      document.getElementById('myTotalPaid').textContent = formatMoney(p.totalPaid);
-      document.getElementById('myTotalShare').textContent = formatMoney(p.totalShare);
-
-      const personalGrid = document.getElementById('personalGrid');
-      const subsidyStatBox = document.getElementById('mySubsidyStatBox');
-      const subsidyNetEl = document.getElementById('mySubsidyNet');
-      if (hasSubsidy || p.subsidyNet !== 0) {
-        personalGrid.classList.add('has-subsidy');
-        subsidyStatBox.classList.remove('hidden');
-        subsidyNetEl.textContent = formatSignedMoney(p.subsidyNet || 0);
-        subsidyNetEl.className = p.subsidyNet > 0 ? 'text-green' : (p.subsidyNet < 0 ? 'text-red' : '');
-      } else {
-        personalGrid.classList.remove('has-subsidy');
-        subsidyStatBox.classList.add('hidden');
-      }
-
-      const netEl = document.getElementById('myNetBalance');
-      netEl.textContent = formatNetMoney(p.netBalance);
-      netEl.className = p.netBalance > 0 ? 'text-green' : (p.netBalance < 0 ? 'text-red' : '');
-
-      const myTransSec = document.getElementById('myTransferSection');
-      const myTransList = document.getElementById('myTransferList');
-      if (p.myTransfers && p.myTransfers.length > 0) {
-        myTransSec.classList.remove('hidden');
-        myTransList.innerHTML = p.myTransfers.map(function (t) {
-          const isMePayer = t.fromId === currentUser.userId;
-          return '<div class="transfer-row">' +
-            '<div class="transfer-users">' +
-            '<span>' + (isMePayer ? '我' : escapeHtml(t.fromName)) + '</span>' +
-            '<i class="fa-solid fa-arrow-right transfer-arrow"></i>' +
-            '<span>' + (!isMePayer ? '我' : escapeHtml(t.toName)) + '</span>' +
-            '</div>' +
-            '<div class="transfer-amt ' + (isMePayer ? 'text-red' : 'text-green') + '">' +
-            (isMePayer ? '應付' : '應收') + ' ' + formatMoney(t.amount) +
-            '</div></div>';
-        }).join('');
-      } else {
-        myTransSec.classList.add('hidden');
-      }
-
-      document.getElementById('myPaidCount').textContent = p.paidItems.length;
-      const paidContainer = document.getElementById('myPaidList');
-      paidContainer.innerHTML = p.paidItems.length === 0
-        ? '<div style="font-size:13px; color:var(--text-sub); text-align:center; padding:12px 0;">尚無預先支付項目</div>'
-        : p.paidItems.map(function (item) {
-            return '<div class="expense-item">' +
-              '<div class="expense-main">' +
-              '<div class="expense-title">' + escapeHtml(item.item_name) + '</div>' +
-              '<div class="expense-sub">分攤對象 (' + item.splitCount + '人)：' + escapeHtml(item.splitNames.join('、')) + '</div>' +
-              '</div>' +
-              '<div class="expense-right">' +
-              '<div class="expense-amount text-green">+' + formatMoney(item.amount) + '</div>' +
-              '</div></div>';
-          }).join('');
-
-      document.getElementById('mySplitCount').textContent = p.splitItems.length;
-      const splitContainer = document.getElementById('mySplitList');
-      splitContainer.innerHTML = p.splitItems.length === 0
-        ? '<div style="font-size:13px; color:var(--text-sub); text-align:center; padding:12px 0;">尚無參與均攤項目</div>'
-        : p.splitItems.map(function (item) {
-            return '<div class="expense-item">' +
-              '<div class="expense-main">' +
-              '<div class="expense-title">' + escapeHtml(item.item_name) + '</div>' +
-              '<div class="expense-sub">' + escapeHtml(item.payerName) + ' 預付總額 $' + item.totalAmount.toLocaleString() + '（共 ' + item.splitCount + ' 人均攤）</div>' +
-              '</div>' +
-              '<div class="expense-right">' +
-              '<div class="expense-amount text-red">-$' + item.myShare.toLocaleString() + '</div>' +
-              '</div></div>';
-          }).join('');
-
-      // 條件式顯示「我參與的贊助／補助款」區塊
-      const subsidyItems = p.subsidyItems || [];
-      const subsidyCard = document.getElementById('mySubsidyCard');
-      if (subsidyItems.length > 0) {
-        subsidyCard.classList.remove('hidden');
-        document.getElementById('mySubsidyCount').textContent = subsidyItems.length;
-        document.getElementById('mySubsidyList').innerHTML = subsidyItems.map(function (item) {
-          let desc = '';
-          if (item.isProvider && item.isBeneficiary) {
-            desc = '我提供 $' + item.totalAmount.toLocaleString() + '・與 ' + escapeHtml(item.splitNames.join('、')) + ' 平分（每人折抵 $' + item.perBenefit.toLocaleString() + '）';
-          } else if (item.isProvider) {
-            desc = '我提供 $' + item.totalAmount.toLocaleString() + ' 贊助給 ' + escapeHtml(item.splitNames.join('、')) + '（每人折抵 $' + item.perBenefit.toLocaleString() + '）';
-          } else {
-            desc = escapeHtml(item.providerName) + ' 提供 $' + item.totalAmount.toLocaleString() + '（共 ' + item.splitCount + ' 人受惠，我折抵 $' + item.perBenefit.toLocaleString() + '）';
-          }
-
-          const amtClass = item.myImpact > 0 ? 'text-green' : (item.myImpact < 0 ? 'text-red' : '');
-          const amtSign = item.myImpact > 0 ? '+' : (item.myImpact < 0 ? '-' : '');
-          return '<div class="expense-item">' +
-            '<div class="expense-main">' +
-            '<div class="expense-title">' + escapeHtml(item.item_name) + '</div>' +
-            '<div class="expense-sub">' + desc + '</div>' +
-            '</div>' +
-            '<div class="expense-right">' +
-            '<div class="expense-amount ' + amtClass + '">' + amtSign + '$' + Math.abs(item.myImpact).toLocaleString() + '</div>' +
-            '</div></div>';
-        }).join('');
-      } else {
-        subsidyCard.classList.add('hidden');
-      }
-    }
-
-    function renderSettlementTab(data) {
-      const transfers = data.transfers || [];
-      const transContainer = document.getElementById('allTransferList');
-
-      if (transfers.length === 0) {
-        transContainer.innerHTML = '<div style="text-align:center; padding:14px 0; color:var(--green); font-size:13px; font-weight:700;">' +
-          '<i class="fa-solid fa-circle-check"></i> 目前所有成員帳目已平衡，無需轉帳！</div>';
-      } else {
-        transContainer.innerHTML = transfers.map(function (t) {
-          return '<div class="transfer-row">' +
-            '<div class="transfer-users">' +
-            '<span>' + escapeHtml(t.fromName) + '</span>' +
-            '<i class="fa-solid fa-arrow-right transfer-arrow"></i>' +
-            '<span>' + escapeHtml(t.toName) + '</span>' +
-            '</div>' +
-            '<div class="transfer-amt">' + formatMoney(t.amount) + '</div>' +
-            '</div>';
-        }).join('');
-      }
-
-      const hasSubsidy = Boolean(data.ledger && data.ledger.hasSubsidy);
-      const thSubsidy = document.getElementById('thSubsidyCol');
-      if (hasSubsidy) thSubsidy.classList.remove('hidden');
-      else thSubsidy.classList.add('hidden');
-
-      const isAdmin = data.permissions.isCreator;
-      const tbody = document.getElementById('memberSummaryBody');
-      tbody.innerHTML = (data.memberSummaries || []).map(function (m, idx) {
-        const netClass = m.netBalance > 0 ? 'text-green' : (m.netBalance < 0 ? 'text-red' : '');
-        const subVal = m.subsidyNet || 0;
-        const subClass = subVal > 0 ? 'text-green' : (subVal < 0 ? 'text-red' : '');
-        const isMe = m.userId === currentUser.userId;
-        const meLabel = isMe ? ' <span style="color:var(--text-sub); font-weight:normal;">(我)</span>' : '';
-        const adminTag = m.userId === data.ledger.creator_id ? '<span class="admin-badge">管理者</span>' : '';
-        const guestTag = m.isGuest ? '<span class="guest-badge">未綁定</span>' : '';
-        const numBadge = '<span style="color:var(--text-sub); font-size:12px; font-weight:700;">' + (idx + 1) + '. </span>';
-
-        const renameBtn = (isAdmin || isMe)
-          ? '<button type="button" class="mini-icon-btn" onclick="openNicknameModal(\'' + m.userId + '\')" title="修改暱稱"><i class="fa-solid fa-pen"></i></button>'
-          : '';
-
-        const removeBtn = (isAdmin && m.userId !== data.ledger.creator_id)
-          ? '<button type="button" class="mini-icon-btn danger" onclick="openRemoveMemberModal(\'' + m.userId + '\')" title="移除成員"><i class="fa-solid fa-trash"></i></button>'
-          : '';
-
-        const subsidyTd = hasSubsidy
-          ? '<td class="num-col ' + subClass + '" style="font-weight:700;">' + formatSignedMoney(subVal) + '</td>'
-          : '';
-
-        return '<tr>' +
-          '<td style="font-weight:700;">' + numBadge + escapeHtml(m.nickname) + meLabel + adminTag + guestTag + renameBtn + removeBtn + '</td>' +
-          '<td class="num-col">' + formatMoney(m.totalPaid) + '</td>' +
-          '<td class="num-col">' + formatMoney(m.totalShare) + '</td>' +
-          subsidyTd +
-          '<td class="num-col ' + netClass + '" style="font-weight:800;">' + formatNetMoney(m.netBalance) + '</td>' +
-          '</tr>';
-      }).join('');
-    }
-
-    // =========================================================================
-    // 4. 互動操作
-    // =========================================================================
-    function switchTab(tabName) {
-      currentTab = tabName;
-      document.querySelectorAll('.tab-btn').forEach(function (btn) {
-        btn.classList.toggle('active', btn.dataset.tab === tabName);
-      });
-      document.querySelectorAll('.tab-panel').forEach(function (panel) {
-        panel.classList.add('hidden');
-      });
-      document.getElementById('tab-' + tabName).classList.remove('hidden');
-    }
-
-    function onSwitchLedger(ledgerId) {
-      if (!ledgerId || ledgerId === appState.activeLedgerId) return;
-      callGasApi('switchLedger', { userId: currentUser.userId, ledgerId: ledgerId }, '正在切換帳本...');
-    }
-
-    // --- 操作手冊與 FAQ 彈窗控制與關鍵字過濾 ---
-    function openFaqModal() {
-      const searchInput = document.getElementById('faqSearchInput');
-      searchInput.value = '';
-      filterFaqItems();
-      openModal('faqModal');
-    }
-
-    function filterFaqItems() {
-      const keyword = document.getElementById('faqSearchInput').value.trim().toLowerCase();
-      const groups = document.querySelectorAll('.faq-category-group');
-      let totalVisible = 0;
-
-      groups.forEach(function (group) {
-        const items = group.querySelectorAll('.faq-item');
-        let groupVisible = 0;
-
-        items.forEach(function (item) {
-          const text = item.textContent.toLowerCase();
-          if (!keyword || text.indexOf(keyword) !== -1) {
-            item.classList.remove('hidden');
-            if (keyword) item.setAttribute('open', '');
-            else item.removeAttribute('open');
-            groupVisible++;
-            totalVisible++;
-          } else {
-            item.classList.add('hidden');
-            item.removeAttribute('open');
-          }
-        });
-
-        if (groupVisible > 0) {
-          group.classList.remove('hidden');
-        } else {
-          group.classList.add('hidden');
-        }
-      });
-
-      const emptyNotice = document.getElementById('faqEmptyNotice');
-      if (totalVisible === 0) {
-        emptyNotice.classList.remove('hidden');
-      } else {
-        emptyNotice.classList.add('hidden');
-      }
-    }
-
-    // --- 建立新帳本（含沿用目前預設帳本成員） ---
-    function openCreateLedgerModal() {
-      document.getElementById('newLedgerTitle').value = '';
-      const copySection = document.getElementById('copyMembersSection');
-      const copyCheckbox = document.getElementById('copyMembersCheckbox');
-      const listWrap = document.getElementById('copyMembersListWrap');
-      const grid = document.getElementById('copyMembersGrid');
-
-      const data = appState && appState.activeLedgerData;
-      const otherMembers = data && data.members
-        ? data.members.filter(function (m) { return m.userId !== currentUser.userId; })
-        : [];
-
-      if (data && otherMembers.length > 0) {
-        copySection.classList.remove('hidden');
-        document.getElementById('copySourceLedgerName').textContent = data.ledger.title;
-        copyCheckbox.checked = false;
-        listWrap.classList.add('hidden');
-
-        grid.innerHTML = otherMembers.map(function (m) {
-          const guestBadge = m.isGuest ? '<span class="guest-badge">未綁定</span>' : '';
-          return '<label class="split-chip checked" onclick="onToggleCopyMemberChip(this)">' +
-            '<input type="checkbox" name="copyMemberUser" value="' + m.userId + '" checked />' +
-            '<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + escapeHtml(m.nickname) + '</span>' +
-            guestBadge +
-            '</label>';
-        }).join('');
-      } else {
-        copySection.classList.add('hidden');
-        copyCheckbox.checked = false;
-        listWrap.classList.add('hidden');
-        grid.innerHTML = '';
-      }
-
-      openModal('createLedgerModal');
-    }
-
-    function onToggleCopyMembers() {
-      const isChecked = document.getElementById('copyMembersCheckbox').checked;
-      const listWrap = document.getElementById('copyMembersListWrap');
-      if (isChecked) {
-        listWrap.classList.remove('hidden');
-      } else {
-        listWrap.classList.add('hidden');
-      }
-    }
-
-    function onToggleCopyMemberChip(labelEl) {
-      setTimeout(function () {
-        const cb = labelEl.querySelector('input[type="checkbox"]');
-        labelEl.classList.toggle('checked', cb.checked);
-      }, 0);
-    }
-
-    function submitCreateLedger() {
-      const title = document.getElementById('newLedgerTitle').value.trim();
-      if (!title) {
-        showToast('請輸入帳本名稱');
-        return;
-      }
-
-      const shouldCopy = document.getElementById('copyMembersCheckbox').checked;
-      let copyFromLedgerId = '';
-      let copyMemberIds = [];
-
-      if (shouldCopy && appState && appState.activeLedgerId) {
-        copyFromLedgerId = appState.activeLedgerId;
-        copyMemberIds = Array.from(document.querySelectorAll('input[name="copyMemberUser"]:checked'))
-          .map(function (cb) { return cb.value; });
-      }
-
-      closeModal('createLedgerModal');
-      document.getElementById('newLedgerTitle').value = '';
-      callGasApi('createLedger', {
-        userId: currentUser.userId,
-        displayName: currentUser.displayName,
-        title: title,
-        copyFromLedgerId: copyFromLedgerId,
-        copyMemberIds: copyMemberIds
-      }, shouldCopy ? '正在建立帳本並匯入成員...' : '正在建立帳本...');
-    }
-
-    function submitJoinLedger() {
-      const code = document.getElementById('joinInviteCodeInput').value.trim().toUpperCase();
-      if (!code) {
-        showToast('請輸入邀請碼');
-        return;
-      }
-      closeModal('joinLedgerModal');
-      document.getElementById('joinInviteCodeInput').value = '';
-      callGasApi('joinLedger', {
-        userId: currentUser.userId,
-        displayName: currentUser.displayName,
-        inviteCode: code
-      }, '正在檢查邀請碼...');
-    }
-
-    function openClaimStep1Modal(choiceData) {
-      pendingInviteChoiceData = choiceData;
-      selectedClaimGuest = null;
-
-      document.getElementById('claimLedgerTitle').textContent = choiceData.title;
-      const container = document.getElementById('claimGuestListContainer');
-
-      container.innerHTML = (choiceData.guestMembers || []).map(function (g) {
-        return '<button type="button" class="claim-option-btn" onclick="selectGuestToClaim(\'' + g.userId + '\')">' +
-          '<div>' +
-          '<div style="font-weight:800; font-size:15px;">我是【' + escapeHtml(g.nickname) + '】<span class="guest-badge">未綁定</span></div>' +
-          '<div style="font-size:12px; color:var(--text-sub); margin-top:2px;">目前帳本內有 ' + g.expenseCount + ' 筆相關帳務紀錄</div>' +
-          '</div>' +
-          '<i class="fa-solid fa-arrow-right" style="color:var(--primary);"></i>' +
-          '</button>';
-      }).join('');
-
-      openModal('claimGuestStep1Modal');
-    }
-
-    function confirmJoinAsNewMember() {
-      if (!pendingInviteChoiceData) return;
-      const code = pendingInviteChoiceData.invite_code;
-      closeModal('claimGuestStep1Modal');
-      pendingInviteChoiceData = null;
-
-      callGasApi('completeInviteJoin', {
-        userId: currentUser.userId,
-        displayName: currentUser.displayName,
-        inviteCode: code,
-        claimGuestId: ''
-      }, '正在以新成員身分加入帳本...');
-    }
-
-    function selectGuestToClaim(guestUserId) {
-      if (!pendingInviteChoiceData) return;
-      const guest = (pendingInviteChoiceData.guestMembers || []).find(function (g) { return g.userId === guestUserId; });
-      if (!guest) return;
-
-      selectedClaimGuest = guest;
-      document.getElementById('confirmClaimGuestName').textContent = guest.nickname;
-      document.getElementById('confirmClaimKeepName').textContent = guest.nickname;
-      document.getElementById('confirmClaimExpenseCount').textContent = guest.expenseCount;
-
-      closeModal('claimGuestStep1Modal');
-      openModal('claimGuestStep2Modal');
-    }
-
-    function backToClaimStep1() {
-      closeModal('claimGuestStep2Modal');
-      if (pendingInviteChoiceData) {
-        openModal('claimGuestStep1Modal');
-      }
-    }
-
-    function executeClaimGuestJoin() {
-      if (!pendingInviteChoiceData || !selectedClaimGuest) return;
-      const code = pendingInviteChoiceData.invite_code;
-      const guestId = selectedClaimGuest.userId;
-
-      closeModal('claimGuestStep2Modal');
-      pendingInviteChoiceData = null;
-      selectedClaimGuest = null;
-
-      callGasApi('completeInviteJoin', {
-        userId: currentUser.userId,
-        displayName: currentUser.displayName,
-        inviteCode: code,
-        claimGuestId: guestId
-      }, '正在認領並合併歷史帳務...');
-    }
-
-    function openRenameLedgerModal() {
-      const data = appState && appState.activeLedgerData;
-      if (!data || !data.permissions.canRenameLedger) return;
-      document.getElementById('renameLedgerInput').value = data.ledger.title || '';
-      openModal('renameLedgerModal');
-    }
-
-    function submitRenameLedger() {
-      const newTitle = document.getElementById('renameLedgerInput').value.trim();
-      if (!newTitle) {
-        showToast('請輸入帳本名稱');
-        return;
-      }
-      if (newTitle === appState.activeLedgerData.ledger.title) {
-        closeModal('renameLedgerModal');
-        return;
-      }
-      closeModal('renameLedgerModal');
-      callGasApi('renameLedger', {
-        userId: currentUser.userId,
-        ledgerId: appState.activeLedgerId,
-        title: newTitle
-      }, '正在更新帳本名稱...');
-    }
-
-    // --- 移交帳本管理者權限 ---
-    function openTransferAdminModal() {
-      const data = appState && appState.activeLedgerData;
-      if (!data || !data.permissions.canTransferAdmin) return;
-
-      const candidates = (data.members || []).filter(function (m) {
-        return m.userId !== currentUser.userId && !m.isGuest;
-      });
-
-      const selectEl = document.getElementById('transferAdminSelect');
-      const formWrap = document.getElementById('transferAdminFormWrap');
-      const emptyHint = document.getElementById('transferAdminEmptyHint');
-      const confirmBtn = document.getElementById('btnConfirmTransferAdmin');
-
-      if (candidates.length === 0) {
-        selectEl.innerHTML = '';
-        formWrap.classList.add('hidden');
-        emptyHint.classList.remove('hidden');
-        confirmBtn.disabled = true;
-      } else {
-        selectEl.innerHTML = candidates.map(function (m) {
-          return '<option value="' + m.userId + '">' + escapeHtml(m.nickname) + '</option>';
-        }).join('');
-        formWrap.classList.remove('hidden');
-        emptyHint.classList.add('hidden');
-        confirmBtn.disabled = false;
-      }
-
-      openModal('transferAdminModal');
-    }
-
-    function executeTransferAdmin() {
-      const data = appState && appState.activeLedgerData;
-      if (!data || !data.permissions.canTransferAdmin) return;
-
-      const newAdminId = document.getElementById('transferAdminSelect').value;
-      if (!newAdminId) {
-        showToast('請選擇要接替的成員');
-        return;
-      }
-
-      closeModal('transferAdminModal');
-      callGasApi('transferAdmin', {
-        userId: currentUser.userId,
-        ledgerId: appState.activeLedgerId,
-        newAdminUserId: newAdminId
-      }, '正在移交帳本管理者權限...');
-    }
-
-    function openDeleteLedgerModal() {
-      const data = appState && appState.activeLedgerData;
-      if (!data || !data.permissions.canDeleteLedger) return;
-
-      document.getElementById('deleteLedgerTargetTitle').textContent = data.ledger.title;
-      document.getElementById('deleteLedgerConfirmInput').value = '';
-      document.getElementById('btnConfirmDeleteLedger').disabled = true;
-      openModal('deleteLedgerModal');
-    }
-
-    function onDeleteLedgerInputChange() {
-      const data = appState && appState.activeLedgerData;
-      if (!data) return;
-      const typed = document.getElementById('deleteLedgerConfirmInput').value.trim();
-      document.getElementById('btnConfirmDeleteLedger').disabled = (typed !== data.ledger.title);
-    }
-
-    function executeDeleteLedger() {
-      const data = appState && appState.activeLedgerData;
-      if (!data || !data.permissions.canDeleteLedger) return;
-
-      const typed = document.getElementById('deleteLedgerConfirmInput').value.trim();
-      if (typed !== data.ledger.title) {
-        showToast('請輸入完全相符的帳本名稱');
-        return;
-      }
-
-      closeModal('deleteLedgerModal');
-      callGasApi('deleteLedger', {
-        userId: currentUser.userId,
-        ledgerId: appState.activeLedgerId,
-        confirmTitle: typed
-      }, '正在永久刪除帳本與所有資料...');
-    }
-
-    function submitAddGuestMember() {
-      const name = document.getElementById('newGuestNameInput').value.trim();
-      if (!name) {
-        showToast('請輸入代管成員名稱');
-        return;
-      }
-      closeModal('addGuestModal');
-      document.getElementById('newGuestNameInput').value = '';
-      callGasApi('addGuestMember', {
-        userId: currentUser.userId,
-        ledgerId: appState.activeLedgerId,
-        nickname: name
-      }, '正在新增代管成員...');
-    }
-
-    function openNicknameModal(targetUserId) {
-      const data = appState && appState.activeLedgerData;
-      if (!data) return;
-      const targetMember = (data.members || []).find(function (m) { return m.userId === targetUserId; });
-      if (!targetMember) return;
-
-      const isSelf = targetUserId === currentUser.userId;
-      document.getElementById('editNicknameTargetUserId').value = targetUserId;
-      document.getElementById('nicknameModalTitle').textContent = isSelf
-        ? '修改我在本帳本的暱稱'
-        : '修改「' + targetMember.nickname + '」的顯示暱稱';
-      document.getElementById('nicknameModalDesc').textContent = isSelf
-        ? '此暱稱僅會套用在「' + data.ledger.title + '」中，方便大家在分帳與結算時辨識。'
-        : '身為帳本管理者，你可以協助調整此成員在「' + data.ledger.title + '」中的顯示名稱。';
-      document.getElementById('editNicknameInput').value = targetMember.nickname || '';
-
-      openModal('editNicknameModal');
-    }
-
-    function submitUpdateNickname() {
-      const targetUserId = document.getElementById('editNicknameTargetUserId').value;
-      const newName = document.getElementById('editNicknameInput').value.trim();
-      if (!newName) {
-        showToast('請輸入要顯示的暱稱');
-        return;
-      }
-      closeModal('editNicknameModal');
-      callGasApi('updateNickname', {
-        userId: currentUser.userId,
-        ledgerId: appState.activeLedgerId,
-        targetUserId: targetUserId,
-        nickname: newName
-      }, '正在更新暱稱...');
-    }
-
-    function openRemoveMemberModal(targetUserId) {
-      const data = appState && appState.activeLedgerData;
-      if (!data || !data.permissions.isCreator) return;
-      const targetMember = (data.members || []).find(function (m) { return m.userId === targetUserId; });
-      if (!targetMember) return;
-
-      document.getElementById('removeTargetUserId').value = targetUserId;
-      document.getElementById('removeTargetUserName').textContent = targetMember.nickname;
-      openModal('removeMemberModal');
-    }
-
-    function executeRemoveMember() {
-      const targetUserId = document.getElementById('removeTargetUserId').value;
-      if (!targetUserId) return;
-      closeModal('removeMemberModal');
-      callGasApi('removeMember', {
-        userId: currentUser.userId,
-        ledgerId: appState.activeLedgerId,
-        targetUserId: targetUserId
-      }, '正在檢查並移除成員...');
-    }
-
-    // --- 複製純文字結算報表 ---
-    async function copyTextSettlementReport() {
-      const data = appState && appState.activeLedgerData;
-      if (!data) return;
-
-      const l = data.ledger;
-      const statusText = l.status === 'SETTLED' ? '🔒 已正式結算' : '🟢 記帳進行中試算';
-      const lines = [
-        '📊【' + l.title + '】結算總覽 (' + statusText + ')',
-        '💰 帳本總支出：$' + l.totalAmount.toLocaleString()
-      ];
-
-      if (l.hasSubsidy) {
-        lines.push('🎁 贊助／補助款折抵：-$' + l.totalSubsidy.toLocaleString());
-      }
-
-      lines.push('------------------------');
-      lines.push('📌 個人收支淨額：');
-
-      (data.memberSummaries || []).forEach(function (m) {
-        const guestSuffix = m.isGuest ? ' (未綁定)' : '';
-        const netStr = m.netBalance > 0
-          ? '應收 +$' + m.netBalance.toLocaleString()
-          : (m.netBalance < 0 ? '應付 -$' + Math.abs(m.netBalance).toLocaleString() : '已打平 $0');
-        lines.push('• ' + m.nickname + guestSuffix + '：' + netStr);
-      });
-
-      lines.push('------------------------');
-      lines.push('💸 最小轉帳結清方式：');
-      if (!data.transfers || data.transfers.length === 0) {
-        lines.push('目前帳目已平衡，無需轉帳！');
-      } else {
-        data.transfers.forEach(function (t, idx) {
-          lines.push((idx + 1) + '. ' + t.fromName + ' ➔ ' + t.toName + '：$' + t.amount.toLocaleString());
-        });
-      }
-
-      const reportText = lines.join('\n');
-      try {
-        await navigator.clipboard.writeText(reportText);
-        showToast('已複製純文字結算結果，可直接貼到群組！');
-      } catch (e) {
-        const tempArea = document.createElement('textarea');
-        tempArea.value = reportText;
-        document.body.appendChild(tempArea);
-        tempArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(tempArea);
-        showToast('已複製純文字結算結果！');
-      }
-    }
-
-    // --- 匯出 CSV 明細報表（含 UTF-8 BOM 防 Excel 亂碼） ---
-    function escapeCsvCell(val) {
-      const str = String(val === null || val === undefined ? '' : val);
-      if (/[",\r\n]/.test(str)) {
-        return '"' + str.replace(/"/g, '""') + '"';
-      }
-      return str;
-    }
-
-    function exportLedgerCsv() {
-      const data = appState && appState.activeLedgerData;
-      if (!data) return;
-
-      const l = data.ledger;
-      const rows = [];
-      const addRow = function (cols) {
-        rows.push(cols.map(escapeCsvCell).join(','));
-      };
-
-      addRow(['【帳本結算報表】']);
-      addRow(['帳本名稱', l.title]);
-      addRow(['帳本狀態', l.status === 'SETTLED' ? '已正式結算鎖定' : '進行中（試算）']);
-      addRow(['帳本總支出', l.totalAmount]);
-      if (l.hasSubsidy) {
-        addRow(['贊助／補助款總額', l.totalSubsidy]);
-      }
-      if (l.settled_at) {
-        addRow(['結算時間', l.settled_at]);
-      }
-      rows.push('');
-
-      addRow(['【一、成員墊付與結算統計】']);
-      addRow(['編號', '成員暱稱', '帳號狀態', '已預先支付', '均攤應付總額', '贊助／補助款淨額', '結算淨額（正數應收／負數應付）']);
-      (data.memberSummaries || []).forEach(function (m, idx) {
-        addRow([
-          idx + 1,
-          m.nickname,
-          m.isGuest ? '未綁定代管' : 'LINE 帳號',
-          m.totalPaid,
-          m.totalShare,
-          m.subsidyNet || 0,
-          m.netBalance
-        ]);
-      });
-      rows.push('');
-
-      addRow(['【二、最小轉帳結清路徑】']);
-      addRow(['序號', '付款人', '收款人', '應轉帳金額']);
-      if (!data.transfers || data.transfers.length === 0) {
-        addRow(['-', '目前帳目已平衡，無需轉帳', '', 0]);
-      } else {
-        data.transfers.forEach(function (t, idx) {
-          addRow([idx + 1, t.fromName, t.toName, t.amount]);
-        });
-      }
-      rows.push('');
-
-      addRow(['【三、所有帳務明細】']);
-      addRow(['序號', '類型', '建立時間', '項目名稱', '金額', '墊付人／提供人', '分攤或受惠人數', '每人均攤／折抵', '對象成員名單']);
-      const chronologicalExpenses = (data.expenses || []).slice().reverse();
-      if (chronologicalExpenses.length === 0) {
-        addRow(['-', '-', '-', '尚無帳務紀錄', 0, '-', 0, 0, '-']);
-      } else {
-        chronologicalExpenses.forEach(function (exp, idx) {
-          const splitCount = exp.split_users ? exp.split_users.length : 0;
-          const perShare = splitCount > 0 ? Math.round((exp.amount / splitCount) * 10) / 10 : 0;
-          addRow([
-            idx + 1,
-            exp.record_type === 'SUBSIDY' ? '贊助／補助款' : '一般支出',
-            exp.created_at,
-            exp.item_name,
-            exp.amount,
-            exp.payerName,
-            splitCount,
-            perShare,
-            (exp.splitNames || []).join('、')
-          ]);
-        });
-      }
-
-      const csvContent = '\uFEFF' + rows.join('\r\n');
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-
-      const safeTitle = String(l.title || '共享記帳本').replace(/[\\/:*?"<>|]/g, '_');
-      const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-      const fileName = safeTitle + '_結算明細_' + todayStr + '.csv';
-
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', fileName);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-
-      const isLineInApp = (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient());
-      if (isLineInApp) {
-        showToast('已執行匯出！若 LINE 內建視窗未自動儲存，請改用其他瀏覽器開啟後下載', 5000);
-      } else {
-        showToast('已下載「' + fileName + '」');
-      }
-    }
-
-    function setExpenseRecordType(type) {
-      const normalized = type === 'SUBSIDY' ? 'SUBSIDY' : 'EXPENSE';
-      const isSubsidy = normalized === 'SUBSIDY';
-      document.getElementById('expRecordType').value = normalized;
-
-      document.getElementById('btnTypeExpense').className = 'record-type-btn' + (!isSubsidy ? ' active-expense' : '');
-      document.getElementById('btnTypeSubsidy').className = 'record-type-btn' + (isSubsidy ? ' active-subsidy' : '');
-
-      // 切換為「贊助／補助款」時自動隱藏定期支出相關區塊
-      const quickRecSec = document.getElementById('quickRecurringSection');
-      const saveRecSec = document.getElementById('saveAsRecurringSection');
-      if (isSubsidy) {
-        quickRecSec.classList.add('hidden');
-        saveRecSec.classList.add('hidden');
-        document.getElementById('saveAsRecurringCheckbox').checked = false;
-        document.getElementById('recurringBillingDayWrap').classList.add('hidden');
-      } else {
-        quickRecSec.classList.remove('hidden');
-        saveRecSec.classList.remove('hidden');
-      }
-
-      document.getElementById('expItemName').placeholder = isSubsidy
-        ? '例如：旅遊補助款、長輩贊助金、刷卡回饋'
-        : '例如：第一天晚餐、租車費、門票';
-      document.getElementById('expAmountLabel').textContent = isSubsidy ? '贊助／補助金額' : '支付金額';
-      document.getElementById('expPayerLabel').textContent = isSubsidy ? '誰提供／領取這筆款項' : '誰預先支付（墊付人）';
-      document.getElementById('expSplitLabel').textContent = isSubsidy ? '哪些人共同享有折抵（受惠成員）' : '哪些人均攤應付';
-
-      const payerHint = document.getElementById('expPayerHint');
-      const subsidyHint = document.getElementById('expSubsidySplitHint');
-      const saveBtn = document.getElementById('btnSaveExpense');
-      if (isSubsidy) {
-        payerHint.classList.remove('hidden');
-        subsidyHint.classList.remove('hidden');
-        saveBtn.style.background = 'var(--green)';
-        saveBtn.style.boxShadow = '0 4px 12px rgba(35, 134, 83, 0.28)';
-      } else {
-        payerHint.classList.add('hidden');
-        subsidyHint.classList.add('hidden');
-        saveBtn.style.background = '';
-        saveBtn.style.boxShadow = '';
-      }
-
-      updateSplitPreview();
-    }
-
-    function openExpenseModal(expenseId, prefillData) {
-      const data = appState.activeLedgerData;
-      if (!data || !data.permissions.canEdit) return;
-
-      renderQuickRecurringChips();
-
-      document.getElementById('saveAsRecurringCheckbox').checked = false;
-      document.getElementById('recurringBillingDayWrap').classList.add('hidden');
-      document.getElementById('saveAsRecurringDay').value = '';
-
-      const members = data.members || [];
-      const memberIdSet = new Set(members.map(m => m.userId));
-      const payerSelect = document.getElementById('expPayerSelect');
-      payerSelect.innerHTML = members.map(function (m) {
-        const suffix = m.userId === currentUser.userId ? ' (我)' : (m.isGuest ? ' (未綁定)' : '');
-        return '<option value="' + m.userId + '">' + escapeHtml(m.nickname) + suffix + '</option>';
-      }).join('');
-
-      let targetExpense = null;
-      if (expenseId) {
-        targetExpense = (data.expenses || []).find(function (e) { return e.expense_id === expenseId; });
-      }
-
-      document.getElementById('editExpenseId').value = targetExpense ? targetExpense.expense_id : '';
-      document.getElementById('expenseModalTitle').textContent = targetExpense ? '編輯帳務項目' : '新增帳務項目';
-
-      if (targetExpense) {
-        document.getElementById('expItemName').value = targetExpense.item_name;
-        document.getElementById('expAmount').value = targetExpense.amount;
-        payerSelect.value = targetExpense.payer_id;
-      } else if (prefillData) {
-        document.getElementById('expItemName').value = prefillData.itemName || '';
-        document.getElementById('expAmount').value = prefillData.amount || '';
-        payerSelect.value = memberIdSet.has(prefillData.payerId) ? prefillData.payerId : currentUser.userId;
-      } else {
-        document.getElementById('expItemName').value = '';
-        document.getElementById('expAmount').value = '';
-        payerSelect.value = currentUser.userId;
-      }
-
-      let selectedSplitIds = members.map(m => m.userId);
-      if (targetExpense) {
-        selectedSplitIds = targetExpense.split_users;
-      } else if (prefillData && Array.isArray(prefillData.splitUsers) && prefillData.splitUsers.length > 0) {
-        const validPrefillSplits = prefillData.splitUsers.filter(uid => memberIdSet.has(uid));
-        if (validPrefillSplits.length > 0) selectedSplitIds = validPrefillSplits;
-      }
-      setExpenseSplitSelection(selectedSplitIds);
-
-      const delBtn = document.getElementById('btnDeleteExpense');
-      if (targetExpense) delBtn.classList.remove('hidden');
-      else delBtn.classList.add('hidden');
-
-      setExpenseRecordType(targetExpense ? targetExpense.record_type : 'EXPENSE');
-      openModal('expenseModal');
-    }
-
-    function setExpenseSplitSelection(selectedIds) {
-      const data = appState && appState.activeLedgerData;
-      if (!data) return;
-      const members = data.members || [];
-      const selectedSplitSet = new Set(selectedIds);
-      const grid = document.getElementById('splitMembersGrid');
-
-      grid.innerHTML = members.map(function (m) {
-        const isChecked = selectedSplitSet.has(m.userId);
-        const guestBadge = m.isGuest ? '<span class="guest-badge">未綁定</span>' : '';
-        return '<label class="split-chip ' + (isChecked ? 'checked' : '') + '" onclick="onToggleSplitChip(this)">' +
-          '<input type="checkbox" name="splitUser" value="' + m.userId + '" ' + (isChecked ? 'checked' : '') + ' onchange="updateSplitPreview()" />' +
-          '<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + escapeHtml(m.nickname) + '</span>' +
-          guestBadge +
-          '</label>';
-      }).join('');
-      updateSplitPreview();
-    }
-
-    function onToggleSplitChip(labelEl) {
-      setTimeout(function () {
-        const cb = labelEl.querySelector('input[type="checkbox"]');
-        labelEl.classList.toggle('checked', cb.checked);
-        updateSplitPreview();
-      }, 0);
-    }
-
-    function toggleSelectAllSplit() {
-      const checkboxes = Array.from(document.querySelectorAll('input[name="splitUser"]'));
-      const allChecked = checkboxes.every(function (cb) { return cb.checked; });
-      checkboxes.forEach(function (cb) {
-        cb.checked = !allChecked;
-        cb.closest('.split-chip').classList.toggle('checked', cb.checked);
-      });
-      updateSplitPreview();
-    }
-
-    function updateSplitPreview() {
-      const isSubsidy = document.getElementById('expRecordType').value === 'SUBSIDY';
-      const amt = Number(document.getElementById('expAmount').value);
-      const checkedCount = document.querySelectorAll('input[name="splitUser"]:checked').length;
-      const previewEl = document.getElementById('splitPreviewBox');
-
-      if (checkedCount === 0) {
-        previewEl.textContent = isSubsidy ? '請至少勾選 1 位受惠成員' : '請至少勾選 1 位均攤成員';
-      } else if (!amt || amt <= 0) {
-        previewEl.textContent = isSubsidy ? ('已選 ' + checkedCount + ' 人共同受惠') : ('已選 ' + checkedCount + ' 人均攤');
-      } else {
-        const perPerson = Math.round((amt / checkedCount) * 10) / 10;
-        previewEl.innerHTML = isSubsidy
-          ? '共 <b>' + checkedCount + '</b> 人受惠，每人折抵 <b>$' + perPerson.toLocaleString() + '</b>'
-          : '共 <b>' + checkedCount + '</b> 人均攤，每人約 <b>$' + perPerson.toLocaleString() + '</b>';
-      }
-    }
-
-    function submitExpenseForm() {
-      const expenseId = document.getElementById('editExpenseId').value;
-      const recordType = document.getElementById('expRecordType').value === 'SUBSIDY' ? 'SUBSIDY' : 'EXPENSE';
-      const isSubsidy = recordType === 'SUBSIDY';
-      const itemName = document.getElementById('expItemName').value.trim();
-      const amount = Number(document.getElementById('expAmount').value);
-      const payerId = document.getElementById('expPayerSelect').value;
-      const splitUsers = Array.from(document.querySelectorAll('input[name="splitUser"]:checked'))
-        .map(function (cb) { return cb.value; });
-
-      const saveAsRecurring = !isSubsidy && document.getElementById('saveAsRecurringCheckbox').checked;
-      const billingDay = document.getElementById('saveAsRecurringDay').value;
-
-      if (!itemName) {
-        showToast('請輸入項目名稱');
-        return;
-      }
-      if (!amount || amount <= 0) {
-        showToast('請輸入大於 0 的金額');
-        return;
-      }
-      if (splitUsers.length === 0) {
-        showToast(isSubsidy ? '請至少勾選一位受惠成員' : '請至少勾選一位均攤成員');
-        return;
-      }
-
-      closeModal('expenseModal');
-      callGasApi('saveExpense', {
-        userId: currentUser.userId,
-        ledgerId: appState.activeLedgerId,
-        expense: {
-          expense_id: expenseId || null,
-          record_type: recordType,
-          item_name: itemName,
-          amount: amount,
-          payer_id: payerId,
-          split_users: splitUsers,
-          save_as_recurring: saveAsRecurring,
-          billing_day: billingDay
-        }
-      }, expenseId ? '正在更新帳務...' : '正在儲存帳務...');
-    }
-
-    // =========================================================================
-    // 4.5 個人定期支出項目管理與快速帶入邏輯
-    // =========================================================================
-    function getEnrichedRecurringTemplates() {
-      const templates = (appState && appState.recurringTemplates) || [];
-      const data = appState && appState.activeLedgerData;
-      const loggedNameSet = new Set(
-        ((data && data.expenses) || [])
-          .filter(function (e) { return (e.record_type || 'EXPENSE') !== 'SUBSIDY'; })
-          .map(function (e) { return String(e.item_name || '').trim().toLowerCase(); })
-      );
-
-      const enriched = templates.map(function (tpl) {
-        const isLogged = loggedNameSet.has(String(tpl.item_name || '').trim().toLowerCase());
-        return Object.assign({}, tpl, { isLoggedInActive: isLogged });
-      });
-
-      // 待入帳排前面，再依每月扣款日由小到大排序
-      enriched.sort(function (a, b) {
-        if (a.isLoggedInActive !== b.isLoggedInActive) {
-          return a.isLoggedInActive ? 1 : -1;
-        }
-        const dayA = a.billing_day > 0 ? a.billing_day : 99;
-        const dayB = b.billing_day > 0 ? b.billing_day : 99;
-        return dayA - dayB;
-      });
-
-      return enriched;
-    }
-
-    function renderQuickRecurringChips() {
-      const container = document.getElementById('quickRecurringChips');
-      const list = getEnrichedRecurringTemplates();
-
-      if (list.length === 0) {
-        container.innerHTML =
-          '<div style="font-size:12px; color:var(--text-sub); padding:4px 2px;">' +
-          '尚未設定定期支出，可勾選下方「同時儲存為範本」或點右上角「管理範本」新增。' +
-          '</div>';
-        return;
-      }
-
-      container.innerHTML = list.map(function (tpl) {
-        const statusClass = tpl.isLoggedInActive ? 'logged' : 'pending';
-        const statusBadge = tpl.isLoggedInActive
-          ? '<span class="tpl-status-pill logged">已記</span>'
-          : '<span class="tpl-status-pill pending">待入帳</span>';
-        const dayText = tpl.billing_day > 0 ? '每月' + tpl.billing_day + '號・' : '';
-        const amtText = tpl.amount > 0 ? '$' + Number(tpl.amount).toLocaleString() : '浮動金額';
-
-        return '<button type="button" class="recurring-chip ' + statusClass + '" data-tpl-id="' + tpl.template_id + '" onclick="applyRecurringTemplateToExpense(\'' + tpl.template_id + '\')">' +
-          '<div style="font-weight:700; display:flex; align-items:center; gap:5px;">' +
-          '<span>' + escapeHtml(tpl.item_name) + '</span>' + statusBadge +
-          '</div>' +
-          '<div style="font-size:11px; color:var(--text-sub);">' + dayText + amtText + '</div>' +
-          '</button>';
-      }).join('');
-    }
-
-    function applyRecurringTemplateToExpense(templateId) {
-      const templates = (appState && appState.recurringTemplates) || [];
-      const tpl = templates.find(function (t) { return t.template_id === templateId; });
-      const data = appState && appState.activeLedgerData;
-      if (!tpl || !data) return;
-
-      document.querySelectorAll('.recurring-chip').forEach(function (el) {
-        el.classList.toggle('selected', el.dataset.tplId === templateId);
-      });
-
-      document.getElementById('expItemName').value = tpl.item_name;
-      document.getElementById('expPayerSelect').value = currentUser.userId;
-
-      // 智慧對應記憶的均攤成員（若在目前帳本找不到吻合對象，則安全退回全員均攤）
-      const ledgerMemberIds = (data.members || []).map(function (m) { return m.userId; });
-      const ledgerMemberSet = new Set(ledgerMemberIds);
-      const matchedSplits = (tpl.split_users || []).filter(function (uid) { return ledgerMemberSet.has(uid); });
-      setExpenseSplitSelection(matchedSplits.length > 0 ? matchedSplits : ledgerMemberIds);
-
-      const amtInput = document.getElementById('expAmount');
-      if (tpl.amount > 0) {
-        amtInput.value = tpl.amount;
-        updateSplitPreview();
-        showToast('已帶入「' + tpl.item_name + '」');
-      } else {
-        amtInput.value = '';
-        updateSplitPreview();
-        amtInput.focus();
-        showToast('已帶入「' + tpl.item_name + '」，請輸入本次金額');
-      }
-    }
-
-    function onToggleSaveAsRecurring() {
-      const checked = document.getElementById('saveAsRecurringCheckbox').checked;
-      const wrap = document.getElementById('recurringBillingDayWrap');
-      if (checked) {
-        wrap.classList.remove('hidden');
-      } else {
-        wrap.classList.add('hidden');
-      }
-    }
-
-    function openRecurringManageModal(fromExpenseModal) {
-      if (fromExpenseModal) {
-        closeModal('expenseModal');
-      }
-
-      const list = getEnrichedRecurringTemplates();
-      const container = document.getElementById('recurringTemplateList');
-      const data = appState && appState.activeLedgerData;
-      const canQuickUse = Boolean(data && data.permissions && data.permissions.canEdit);
-
-      const memberMap = {};
-      ((data && data.members) || []).forEach(function (m) {
-        memberMap[m.userId] = m.nickname;
-      });
-
-      if (list.length === 0) {
-        container.innerHTML =
-          '<div style="text-align:center; padding:26px 12px; background:#faf6f5; border:1px dashed var(--border-color); border-radius:12px; color:var(--text-sub); font-size:13px; line-height:1.5;">' +
-          '目前尚未建立任何定期支出範本，<br>點擊下方按鈕新增你的固定開銷項目吧！' +
-          '</div>';
-      } else {
-        container.innerHTML = list.map(function (tpl) {
-          const statusHtml = data
-            ? (tpl.isLoggedInActive
-                ? '<span class="tpl-status-pill logged" style="margin-left:5px;">本帳本已記</span>'
-                : '<span class="tpl-status-pill pending" style="margin-left:5px;">待入帳</span>')
-            : '';
-          const dayHtml = tpl.billing_day > 0 ? '每月 ' + tpl.billing_day + ' 號扣款・' : '';
-          const amtHtml = tpl.amount > 0 ? formatMoney(tpl.amount) : '浮動金額';
-
-          // 顯示在本帳本對應到的均攤成員名稱
-          const matchedNames = (tpl.split_users || [])
-            .map(function (uid) { return memberMap[uid]; })
-            .filter(Boolean);
-          const splitDesc = matchedNames.length > 0
-            ? '預設均攤：' + escapeHtml(matchedNames.join('、'))
-            : ((tpl.split_users && tpl.split_users.length > 0)
-                ? '預設均攤：已記憶 ' + tpl.split_users.length + ' 人（帶入時依本帳本調整）'
-                : '預設均攤：全員均攤');
-
-          const useBtn = canQuickUse
-            ? '<button type="button" class="edit-link" style="margin-top:0; background:var(--green-bg); color:var(--green);" onclick="useRecurringFromManage(\'' + tpl.template_id + '\')">' +
-              '<i class="fa-solid fa-plus"></i> 帶入記帳</button>'
-            : '';
-
-          return '<div class="tpl-card ' + (tpl.isLoggedInActive ? '' : 'pending') + '">' +
-            '<div style="flex:1; min-width:0;">' +
-            '<div style="font-size:14.5px; font-weight:800; margin-bottom:3px;">' + escapeHtml(tpl.item_name) + statusHtml + '</div>' +
-            '<div style="font-size:12px; color:var(--text-sub); line-height:1.45;">' +
-            dayHtml + '預設金額：<b>' + amtHtml + '</b><br>' + splitDesc +
-            '</div></div>' +
-            '<div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px; flex-shrink:0;">' +
-            useBtn +
-            '<div>' +
-            '<button type="button" class="mini-icon-btn" onclick="openRecurringEditModal(\'' + tpl.template_id + '\')" title="編輯範本"><i class="fa-solid fa-pen"></i></button>' +
-            '<button type="button" class="mini-icon-btn danger" onclick="openDeleteRecurringModal(\'' + tpl.template_id + '\')" title="刪除範本"><i class="fa-solid fa-trash"></i></button>' +
-            '</div></div></div>';
-        }).join('');
-      }
-
-      openModal('recurringManageModal');
-    }
-
-    function useRecurringFromManage(templateId) {
-      closeModal('recurringManageModal');
-      openExpenseModal();
-      setTimeout(function () {
-        applyRecurringTemplateToExpense(templateId);
-      }, 30);
-    }
-
-    function openRecurringEditModal(templateId) {
-      const templates = (appState && appState.recurringTemplates) || [];
-      const target = templateId ? templates.find(function (t) { return t.template_id === templateId; }) : null;
-
-      document.getElementById('editRecurringId').value = target ? target.template_id : '';
-      document.getElementById('recurringEditTitle').textContent = target ? '編輯定期支出範本' : '新增定期支出範本';
-      document.getElementById('tplItemName').value = target ? target.item_name : '';
-      document.getElementById('tplAmount').value = target ? target.amount : '';
-      document.getElementById('tplBillingDay').value = (target && target.billing_day > 0) ? target.billing_day : '';
-
-      const data = appState && appState.activeLedgerData;
-      // 僅列出已綁定 LINE 的真實成員，排除未綁定代管成員避免跨帳本無法對應
-      const boundMembers = ((data && data.members) || []).filter(function (m) { return !m.isGuest; });
-      const savedSplits = (target && target.split_users || []).filter(function (uid) {
-        return boundMembers.some(function (m) { return m.userId === uid; });
-      });
-      const selectedSet = new Set(
-        savedSplits.length > 0
-          ? savedSplits
-          : boundMembers.map(function (m) { return m.userId; })
-      );
-
-      const grid = document.getElementById('tplSplitMembersGrid');
-      if (boundMembers.length === 0) {
-        grid.innerHTML = '<div style="grid-column:1/-1; font-size:12px; color:var(--text-sub);">加入帳本後即可在此勾選已綁定 LINE 的預設均攤成員（目前將預設為全員均攤）。</div>';
-      } else {
-        grid.innerHTML = boundMembers.map(function (m) {
-          const isChecked = selectedSet.has(m.userId);
-          return '<label class="split-chip ' + (isChecked ? 'checked' : '') + '" onclick="onToggleTplSplitChip(this)">' +
-            '<input type="checkbox" name="tplSplitUser" value="' + m.userId + '" ' + (isChecked ? 'checked' : '') + ' />' +
-            '<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + escapeHtml(m.nickname) + '</span>' +
-            '</label>';
-        }).join('');
-      }
-
-      closeModal('recurringManageModal');
-      openModal('recurringEditModal');
-    }
-
-    function onToggleTplSplitChip(labelEl) {
-      setTimeout(function () {
-        const cb = labelEl.querySelector('input[type="checkbox"]');
-        labelEl.classList.toggle('checked', cb.checked);
-      }, 0);
-    }
-
-    function toggleSelectAllTplSplit() {
-      const checkboxes = Array.from(document.querySelectorAll('input[name="tplSplitUser"]'));
-      const allChecked = checkboxes.every(function (cb) { return cb.checked; });
-      checkboxes.forEach(function (cb) {
-        cb.checked = !allChecked;
-        cb.closest('.split-chip').classList.toggle('checked', cb.checked);
-      });
-    }
-
-    function backToRecurringManage() {
-      closeModal('recurringEditModal');
-      openRecurringManageModal();
-    }
-
-    function submitRecurringTemplateForm() {
-      const templateId = document.getElementById('editRecurringId').value;
-      const itemName = document.getElementById('tplItemName').value.trim();
-      const rawAmt = document.getElementById('tplAmount').value;
-      const amount = rawAmt === '' ? 0 : Number(rawAmt);
-      const billingDay = document.getElementById('tplBillingDay').value;
-      const splitUsers = Array.from(document.querySelectorAll('input[name="tplSplitUser"]:checked'))
-        .map(function (cb) { return cb.value; });
-
-      if (!itemName) {
-        showToast('請輸入定期項目名稱');
-        return;
-      }
-      if (isNaN(amount) || amount < 0) {
-        showToast('預設金額不可小於 0');
-        return;
-      }
-
-      closeModal('recurringEditModal');
-      reopenRecurringManage = true;
-      callGasApi('saveRecurringTemplate', {
-        userId: currentUser.userId,
-        template: {
-          template_id: templateId || null,
-          item_name: itemName,
-          amount: amount,
-          billing_day: billingDay,
-          split_users: splitUsers
-        }
-      }, '正在儲存定期支出範本...');
-    }
-
-    function openDeleteRecurringModal(templateId) {
-      const templates = (appState && appState.recurringTemplates) || [];
-      const target = templates.find(function (t) { return t.template_id === templateId; });
-      if (!target) return;
-
-      document.getElementById('deleteRecurringTargetId').value = templateId;
-      document.getElementById('deleteRecurringTargetName').textContent = target.item_name;
-      closeModal('recurringManageModal');
-      openModal('confirmDeleteRecurringModal');
-    }
-
-    function backToRecurringManageFromDelete() {
-      closeModal('confirmDeleteRecurringModal');
-      openRecurringManageModal();
-    }
-
-    function executeDeleteRecurringTemplate() {
-      const templateId = document.getElementById('deleteRecurringTargetId').value;
-      if (!templateId) return;
-
-      closeModal('confirmDeleteRecurringModal');
-      reopenRecurringManage = true;
-      callGasApi('deleteRecurringTemplate', {
-        userId: currentUser.userId,
-        templateId: templateId
-      }, '正在刪除定期支出範本...');
-    }
-
-    // =========================================================================
-    // 4.6 帳務操作歷程（按需分頁載入，每次 10 筆）
-    // =========================================================================
-    let activityLogState = {
-      filter: 'ALL',
-      offset: 0,
-      total: 0,
-      hasMore: false,
-      loading: false,
-      items: []
-    };
-
-    function openActivityLogModal() {
-      if (!appState || !appState.activeLedgerId) return;
-      activityLogState = {
-        filter: 'ALL',
-        offset: 0,
-        total: 0,
-        hasMore: false,
-        loading: false,
-        items: []
-      };
-      updateLogFilterButtons();
-      document.getElementById('activityLogList').innerHTML = '';
-      document.getElementById('activityLogCountHint').textContent = '';
-      document.getElementById('btnLoadMoreLogs').classList.add('hidden');
-      openModal('activityLogModal');
-      fetchActivityLogsPage(false);
-    }
-
-    function switchActivityLogFilter(filterMode) {
-      if (activityLogState.loading || activityLogState.filter === filterMode) return;
-      activityLogState.filter = filterMode;
-      activityLogState.offset = 0;
-      activityLogState.items = [];
-      activityLogState.hasMore = false;
-      updateLogFilterButtons();
-      document.getElementById('activityLogList').innerHTML = '';
-      document.getElementById('btnLoadMoreLogs').classList.add('hidden');
-      fetchActivityLogsPage(false);
-    }
-
-    function updateLogFilterButtons() {
-      document.getElementById('logFilterAll').classList.toggle('active', activityLogState.filter === 'ALL');
-      document.getElementById('logFilterModify').classList.toggle('active', activityLogState.filter === 'MODIFY_ONLY');
-    }
-
-    function loadMoreActivityLogs() {
-      if (activityLogState.loading || !activityLogState.hasMore) return;
-      fetchActivityLogsPage(true);
-    }
-
-    async function fetchActivityLogsPage(isAppend) {
-      activityLogState.loading = true;
-      const loadingEl = document.getElementById('activityLogLoading');
-      const loadMoreBtn = document.getElementById('btnLoadMoreLogs');
-      loadingEl.classList.remove('hidden');
-      loadMoreBtn.classList.add('hidden');
-
-      try {
-        const response = await fetch(GAS_API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({
-            api_action: 'getActivityLogs',
-            userId: currentUser.userId,
-            ledgerId: appState.activeLedgerId,
-            filter: activityLogState.filter,
-            offset: activityLogState.offset,
-            limit: 10
-          })
-        });
-
-        if (!response.ok) throw new Error('伺服器連線異常 (HTTP ' + response.status + ')');
-        const json = await response.json();
-        if (!json.ok) throw new Error(json.error || '讀取歷程失敗');
-
-        const resData = json.data || {};
-        const newItems = resData.logs || [];
-        activityLogState.items = isAppend ? activityLogState.items.concat(newItems) : newItems;
-        activityLogState.offset = resData.nextOffset || activityLogState.items.length;
-        activityLogState.total = resData.total || 0;
-        activityLogState.hasMore = Boolean(resData.hasMore);
-
-        renderActivityLogList();
-      } catch (err) {
-        showToast(err.message || '載入歷程失敗');
-      } finally {
-        activityLogState.loading = false;
-        loadingEl.classList.add('hidden');
-      }
-    }
-
-    function renderActivityLogList() {
-      const container = document.getElementById('activityLogList');
-      const countHint = document.getElementById('activityLogCountHint');
-      const loadMoreBtn = document.getElementById('btnLoadMoreLogs');
-      const items = activityLogState.items;
-
-      if (items.length === 0) {
-        countHint.textContent = '';
-        container.innerHTML =
-          '<div style="text-align:center; padding:26px 12px; background:#faf6f5; border:1px dashed var(--border-color); border-radius:12px; color:var(--text-sub); font-size:13px;">' +
-          (activityLogState.filter === 'MODIFY_ONLY'
-            ? '目前尚無任何「修改」或「刪除」帳務的紀錄。'
-            : '目前尚無帳務操作歷程（新建立、修改或刪除的帳務皆會記錄於此）。') +
-          '</div>';
-        loadMoreBtn.classList.add('hidden');
-        return;
-      }
-
-      countHint.textContent = '目前顯示 ' + items.length + ' / 共 ' + activityLogState.total + ' 筆紀錄';
-      container.innerHTML = items.map(function (log) {
-        let cardCls = 'type-add';
-        let badgeCls = 'add';
-        let badgeLabel = '新增';
-        if (log.action_type === 'EXP_EDIT') {
-          cardCls = 'type-edit';
-          badgeCls = 'edit';
-          badgeLabel = '編輯';
-        } else if (log.action_type === 'EXP_DEL') {
-          cardCls = 'type-del';
-          badgeCls = 'del';
-          badgeLabel = '刪除';
-        }
-
-        const sourceBadge = log.source === 'LINE'
-          ? '<span class="log-source-pill"><i class="fa-brands fa-line"></i> LINE 快記</span>'
-          : '';
-
-        return '<div class="log-card ' + cardCls + '">' +
-          '<div class="log-card-top">' +
-          '<div><span class="log-badge ' + badgeCls + '">' + badgeLabel + '</span>' + sourceBadge + '</div>' +
-          '<span style="font-size:11px; color:var(--text-sub);">' + escapeHtml(log.created_at) + '</span>' +
-          '</div>' +
-          '<div style="font-size:13.5px; font-weight:800; color:var(--text-main); margin-bottom:3px;">' +
-          escapeHtml(log.operator_name) + ' <span style="font-weight:400; color:var(--text-sub);">操作</span>「' + escapeHtml(log.target_name) + '」' +
-          '</div>' +
-          '<div style="font-size:12px; color:var(--text-sub); line-height:1.5;">' +
-          escapeHtml(log.detail_summary) +
-          '</div></div>';
-      }).join('');
-
-      if (activityLogState.hasMore) {
-        const remain = activityLogState.total - items.length;
-        loadMoreBtn.innerHTML = '<i class="fa-solid fa-angles-down"></i> 載入更早紀錄（還有 ' + remain + ' 筆）';
-        loadMoreBtn.classList.remove('hidden');
-      } else {
-        loadMoreBtn.classList.add('hidden');
-      }
-    }
-
-    function confirmDeleteCurrentExpense() {
-      const expenseId = document.getElementById('editExpenseId').value;
-      if (!expenseId) return;
-      closeModal('expenseModal');
-      callGasApi('deleteExpense', {
-        userId: currentUser.userId,
-        ledgerId: appState.activeLedgerId,
-        expenseId: expenseId
-      }, '正在刪除帳務...');
-    }
-
-    function openShareModal() {
-      const ledger = appState.activeLedgerData.ledger;
-      document.getElementById('modalInviteCodeBadge').textContent = ledger.invite_code;
-
-      if (isMockMode) {
-        const baseUrl = window.location.origin + window.location.pathname;
-        document.getElementById('shareUrlInput').value =
-          baseUrl + '?mock_user=TEST_U02&mock_name=旅伴小華&invite=' + ledger.invite_code;
-      } else {
-        document.getElementById('shareUrlInput').value = ledger.invite_url;
-      }
-
-      const lineShareBtn = document.getElementById('btnLineShare');
-      if (!isMockMode && liff.isApiAvailable && liff.isApiAvailable('shareTargetPicker')) {
-        lineShareBtn.classList.remove('hidden');
-      } else {
-        lineShareBtn.classList.add('hidden');
-      }
-      openModal('shareInviteModal');
-    }
-
-    async function copyInviteUrl() {
-      const input = document.getElementById('shareUrlInput');
-      try {
-        await navigator.clipboard.writeText(input.value);
-        showToast('已複製邀請連結！');
-      } catch (e) {
-        input.select();
-        document.execCommand('copy');
-        showToast('已複製邀請連結！');
-      }
-    }
-
-    async function shareViaLinePicker() {
-      const ledger = appState.activeLedgerData.ledger;
-      try {
-        await liff.shareTargetPicker([
-          {
-            type: 'text',
-            text: '邀請你加入共享記帳本「' + ledger.title + '」！點擊連結立即加入記帳：\n' + ledger.invite_url
-          }
-        ]);
-        closeModal('shareInviteModal');
-      } catch (err) {
-        showToast('已取消傳送或無法開啟好友選單');
-      }
-    }
-
-    function executeSettleLedger() {
-      closeModal('confirmSettleModal');
-      callGasApi('settleLedger', {
-        userId: currentUser.userId,
-        ledgerId: appState.activeLedgerId
-      }, '正在結算並鎖定帳本...');
-    }
-
-    // =========================================================================
-    // 5. UI 輔助工具（含點擊遮罩與 Escape 鍵關閉彈窗）
-    // =========================================================================
-    function openModal(id) {
-      document.getElementById(id).classList.add('open');
-    }
-
-    function closeModal(id) {
-      document.getElementById(id).classList.remove('open');
-    }
-
-    document.querySelectorAll('.modal-backdrop').forEach(function (backdrop) {
-      backdrop.addEventListener('click', function (e) {
-        if (e.target === backdrop) {
-          backdrop.classList.remove('open');
-        }
-      });
-    });
-
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') {
-        document.querySelectorAll('.modal-backdrop.open').forEach(function (el) {
-          el.classList.remove('open');
-        });
-      }
-    });
-
-    function showLoading(text) {
-      document.getElementById('loadingText').textContent = text || '載入中...';
-      document.getElementById('loadingOverlay').classList.remove('hidden');
-    }
-
-    function hideLoading() {
-      document.getElementById('loadingOverlay').classList.add('hidden');
-    }
-
-    let toastTimer = null;
-    function showToast(msg, duration) {
-      const el = document.getElementById('toastBox');
-      el.textContent = msg;
-      el.style.display = 'block';
-      clearTimeout(toastTimer);
-      toastTimer = setTimeout(function () {
-        el.style.display = 'none';
-      }, duration || 3000);
-    }
-
-    function formatMoney(num) {
-      return '$' + Math.round(Number(num || 0)).toLocaleString();
-    }
-
-    function formatNetMoney(num) {
-      const n = Math.round(Number(num || 0));
-      if (n > 0) return '應收 +$' + n.toLocaleString();
-      if (n < 0) return '應付 -$' + Math.abs(n).toLocaleString();
-      return '$0 (已打平)';
-    }
-
-    function formatSignedMoney(num) {
-      const n = Math.round(Number(num || 0));
-      if (n > 0) return '+$' + n.toLocaleString();
-      if (n < 0) return '-$' + Math.abs(n).toLocaleString();
-      return '$0';
-    }
-
-    function escapeHtml(str) {
-      return String(str || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-    }
-  </script>
+  <script src="./app.js"></script>
 </body>
+
 </html>
