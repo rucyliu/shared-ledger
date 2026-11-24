@@ -1062,6 +1062,81 @@
       border-color: #f3c677;
       background: #fffdf9;
     }
+
+    /* 贊助／補助款類型切換器 */
+    .record-type-switch {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      background: #f4ece9;
+      padding: 4px;
+      border-radius: 12px;
+      margin-bottom: 14px;
+    }
+
+    .record-type-btn {
+      border: none;
+      background: transparent;
+      padding: 9px 6px;
+      border-radius: 9px;
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--text-sub);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+
+    .record-type-btn.active-expense {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(217, 115, 123, 0.28);
+    }
+
+    .record-type-btn.active-subsidy {
+      background: var(--green);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(35, 134, 83, 0.25);
+    }
+
+    /* 列表中的贊助／補助款視覺區隔 */
+    .expense-item.is-subsidy {
+      background: #f4fbf7;
+      margin: 0 -10px;
+      padding: 12px 10px;
+      border-radius: 10px;
+      border-left: 3.5px solid var(--green);
+      border-bottom: 1px solid #e2f2e9;
+    }
+
+    .subsidy-tag {
+      display: inline-block;
+      background: var(--green-bg);
+      color: var(--green);
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 5px;
+      margin-right: 4px;
+    }
+
+    .subsidy-hint-box {
+      margin-top: 6px;
+      font-size: 11.5px;
+      color: #1e6b43;
+      background: #edf8f2;
+      border: 1px solid #cdebd9;
+      padding: 7px 10px;
+      border-radius: 8px;
+      line-height: 1.45;
+    }
+
+    /* 含贊助／補助款時，個人統計改為 2x2 排版 */
+    .personal-grid.has-subsidy {
+      grid-template-columns: repeat(2, 1fr);
+    }
   </style>
 </head>
 <body>
@@ -1137,6 +1212,7 @@
           <div class="stat-box">
             <span>帳本累積總支出</span>
             <strong id="ledgerTotalAmount">$0</strong>
+            <div id="heroSubsidySub" class="hidden" style="font-size:11px; color:var(--green); font-weight:700; margin-top:2px;"></div>
           </div>
           <div class="stat-box">
             <span>我的結算淨額</span>
@@ -1204,7 +1280,7 @@
               <i class="fa-solid fa-repeat"></i> 定期支出設定
             </button>
           </div>
-          <div class="personal-grid">
+          <div id="personalGrid" class="personal-grid">
             <div class="p-box">
               <span>已預先支付</span>
               <strong id="myTotalPaid">$0</strong>
@@ -1212,6 +1288,10 @@
             <div class="p-box">
               <span>均攤應付總額</span>
               <strong id="myTotalShare">$0</strong>
+            </div>
+            <div id="mySubsidyStatBox" class="p-box hidden">
+              <span>贊助／補助款</span>
+              <strong id="mySubsidyNet">$0</strong>
             </div>
             <div class="p-box">
               <span>個人淨額</span>
@@ -1239,6 +1319,13 @@
             <span>我參與均攤的項目 (<span id="mySplitCount">0</span>)</span>
           </div>
           <div id="mySplitList"></div>
+        </div>
+
+        <div id="mySubsidyCard" class="card hidden" style="border-color:#cdebd9; background:#fbfefc;">
+          <div class="section-title" style="color:var(--green);">
+            <span><i class="fa-solid fa-gift"></i> 我參與的贊助／補助款 (<span id="mySubsidyCount">0</span>)</span>
+          </div>
+          <div id="mySubsidyList"></div>
         </div>
       </div>
 
@@ -1269,6 +1356,7 @@
                 <th>成員 (編號)</th>
                 <th class="num-col">已預付</th>
                 <th class="num-col">應均攤</th>
+                <th id="thSubsidyCol" class="num-col hidden">贊助／補助</th>
                 <th class="num-col">淨額</th>
               </tr>
             </thead>
@@ -1337,8 +1425,19 @@
         <button class="close-btn" onclick="closeModal('expenseModal')"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <input type="hidden" id="editExpenseId" />
+      <input type="hidden" id="expRecordType" value="EXPENSE" />
 
-      <!-- 快速帶入個人定期支出項目列 -->
+      <!-- 帳務類型切換：一般支出 vs 贊助／補助款 -->
+      <div class="record-type-switch">
+        <button type="button" id="btnTypeExpense" class="record-type-btn active-expense" onclick="setExpenseRecordType('EXPENSE')">
+          <i class="fa-solid fa-receipt"></i> 一般支出
+        </button>
+        <button type="button" id="btnTypeSubsidy" class="record-type-btn" onclick="setExpenseRecordType('SUBSIDY')">
+          <i class="fa-solid fa-gift"></i> 贊助／補助款
+        </button>
+      </div>
+
+      <!-- 快速帶入個人定期支出項目列（切換為贊助／補助款時自動隱藏） -->
       <div id="quickRecurringSection" class="recurring-quick-box">
         <div class="recurring-quick-header">
           <span><i class="fa-solid fa-bolt" style="color:#d97706;"></i> 快速帶入我的定期支出</span>
@@ -1355,28 +1454,34 @@
       </div>
 
       <div class="form-group">
-        <label class="form-label">支付金額</label>
+        <label id="expAmountLabel" class="form-label">支付金額</label>
         <input type="number" id="expAmount" class="form-control" inputmode="decimal" placeholder="請輸入金額" min="1" step="any" oninput="updateSplitPreview()" />
       </div>
 
       <div class="form-group">
-        <label class="form-label">誰預先支付（墊付人）</label>
+        <label id="expPayerLabel" class="form-label">誰預先支付（墊付人）</label>
         <select id="expPayerSelect" class="form-control"></select>
+        <div id="expPayerHint" class="hidden" style="font-size:11.5px; color:var(--text-sub); margin-top:5px;">
+          結算時由這位成員負責分出此筆贊助／補助款。
+        </div>
       </div>
 
       <div class="form-group">
         <div class="form-label">
-          <span>哪些人均攤應付</span>
+          <span id="expSplitLabel">哪些人均攤應付</span>
           <button type="button" class="icon-btn" style="padding:3px 8px; font-size:12px;" onclick="toggleSelectAllSplit()">
             全選 / 取消全選
           </button>
         </div>
         <div id="splitMembersGrid" class="split-grid"></div>
         <div id="splitPreviewBox" class="split-preview">請勾選均攤成員</div>
+        <div id="expSubsidySplitHint" class="subsidy-hint-box hidden">
+          <i class="fa-solid fa-circle-info"></i> 若提供／領款人也在受惠名單內，代表與大家平分折抵；取消勾選本人則代表全額贊助其他成員。
+        </div>
       </div>
 
-      <!-- 順手存為個人定期支出範本 -->
-      <div style="background:#faf6f5; border:1px solid var(--border-color); border-radius:12px; padding:10px 12px; margin-bottom:12px;">
+      <!-- 順手存為個人定期支出範本（切換為贊助／補助款時自動隱藏） -->
+      <div id="saveAsRecurringSection" style="background:#faf6f5; border:1px solid var(--border-color); border-radius:12px; padding:10px 12px; margin-bottom:12px;">
         <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color:var(--text-main); cursor:pointer; margin:0;">
           <input type="checkbox" id="saveAsRecurringCheckbox" style="accent-color:var(--primary); width:16px; height:16px; margin:0;" onchange="onToggleSaveAsRecurring()" />
           <span><i class="fa-solid fa-repeat" style="color:var(--primary);"></i> 同時儲存為我的定期支出範本</span>
@@ -1391,7 +1496,7 @@
         <button id="btnDeleteExpense" type="button" class="btn-secondary text-red hidden" onclick="confirmDeleteCurrentExpense()">
           <i class="fa-solid fa-trash"></i> 刪除
         </button>
-        <button type="button" class="btn-primary" style="flex:1;" onclick="submitExpenseForm()">
+        <button id="btnSaveExpense" type="button" class="btn-primary" style="flex:1;" onclick="submitExpenseForm()">
           <i class="fa-solid fa-check"></i> 儲存項目
         </button>
       </div>
@@ -1696,7 +1801,7 @@
 
       <div class="faq-search-wrap">
         <i class="fa-solid fa-magnifying-glass"></i>
-        <input type="text" id="faqSearchInput" class="faq-search-input" placeholder="搜尋關鍵字（例如：定期、代管、編號、管理者、移交、結算）" oninput="filterFaqItems()" />
+        <input type="text" id="faqSearchInput" class="faq-search-input" placeholder="搜尋關鍵字（例如：贊助、補助、定期、代管、編號、管理者）" oninput="filterFaqItems()" />
       </div>
 
       <div id="faqEmptyNotice" class="hidden" style="text-align:center; padding:24px 0; color:var(--text-sub); font-size:13px;">
@@ -1743,7 +1848,7 @@
 
         <!-- 分類二 -->
         <div class="faq-category-group">
-          <div class="faq-cat-title"><i class="fa-solid fa-pen-to-square"></i> 二、日常記帳、定期支出與成員</div>
+          <div class="faq-cat-title"><i class="fa-solid fa-pen-to-square"></i> 二、日常記帳、贊助／補助款與定期支出</div>
 
           <details class="faq-item">
             <summary class="faq-q">
@@ -1751,7 +1856,7 @@
               <i class="fa-solid fa-chevron-down faq-chevron"></i>
             </summary>
             <div class="faq-a">
-              帳本管理者可點擊主卡片下方的 <b>「代管成員」</b>，輸入暱稱（例如：阿公、不記帳的小美）建立 <span class="guest-badge" style="margin-left:0;">未綁定</span> 成員。代管成員一樣可作為墊付人或均攤對象參與結算，日後對方若加入帳本也能隨時認領合併。
+              帳本管理者可點擊主卡片下方的 <b>「代管成員」</b>，輸入暱稱（例如：阿公、不記帳的小美）建立 <span class="guest-badge" style="margin-left:0;">未綁定</span> 成員。代管成員一樣可作為墊付人、補助提供人或均攤／受惠對象參與結算，日後對方若加入帳本也能隨時認領合併。
             </div>
           </details>
 
@@ -1761,7 +1866,7 @@
               <i class="fa-solid fa-chevron-down faq-chevron"></i>
             </summary>
             <div class="faq-a">
-              只要帳本狀態為 <b>「進行中」</b>，所有成員皆可至 <b>「帳務明細」</b> 分頁點擊項目右側的 <b>「編輯」</b> 修改名稱、金額、墊付人或均攤人，也可刪除該筆項目。一旦帳本管理者執行「正式結算」後，帳本即鎖定為唯讀。
+              只要帳本狀態為 <b>「進行中」</b>，所有成員皆可至 <b>「帳務明細」</b> 分頁點擊項目右側的 <b>「編輯」</b> 修改類型、名稱、金額、墊付／提供人或分攤名單，也可刪除該筆項目。一旦帳本管理者執行「正式結算」後，帳本即鎖定為唯讀。
             </div>
           </details>
 
@@ -1777,13 +1882,26 @@
 
           <details class="faq-item">
             <summary class="faq-q">
-              <span>7. 如何使用「個人定期支出」提醒每月固定開銷？</span>
+              <span>7. 什麼時候使用「贊助／補助款」？金額怎麼計算？</span>
+              <i class="fa-solid fa-chevron-down faq-chevron"></i>
+            </summary>
+            <div class="faq-a">
+              適合「有人領取補助款或自掏腰包贊助大家花費」（如旅遊補助、長輩贊助金、刷卡回饋）的情境。點擊「新增帳務項目」後，將頂部類型切換為 <b>「🎁 贊助／補助款」</b> 即可輸入：<br>
+              • <b>情境 1（平分外部補助）</b>：A 領取 $3,000 旅遊補助，受惠成員勾選 <b>A、B、C</b> 三人 ➔ 每人各折抵 $1,000；A 負責拿出 $3,000 扣掉自己折抵的 $1,000，補助淨額為 <span class="faq-code">-$2,000</span>，B 與 C 各為 <span class="faq-code">+$1,000</span>。<br>
+              • <b>情境 2（個人純贊助他人）</b>：A 自掏腰包贊助 $3,000，受惠成員<b>取消勾選 A</b>、只勾 <b>B、C</b> ➔ A 補助淨額為 <span class="faq-code">-$3,000</span>，B 與 C 各折抵 <span class="faq-code">+$1,500</span>。<br>
+              • 帳本含贊助／補助款時，「結算總覽」會自動展開 <b>「贊助／補助」</b> 欄位，讓 <span class="faq-code">已預付 - 應均攤 + 贊助／補助 = 淨額</span> 清楚透明。
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">
+              <span>8. 如何使用「個人定期支出」提醒每月固定開銷？</span>
               <i class="fa-solid fa-chevron-down faq-chevron"></i>
             </summary>
             <div class="faq-a">
               定期支出範本綁定你的個人 LINE 帳號，<b>跨所有帳本皆可共用</b>（適合每月固定訂閱費、會員費）：<br>
-              • <b>建立與管理</b>：可從 <b>「我的明細 ➔ 定期支出設定」</b> 新增，或在新增帳務時勾選 <b>「同時儲存為我的定期支出範本」</b>。金額可填 <span class="faq-code">0</span> 代表浮動帳單（如水電費），也可設定每月扣款日（1～31 號）與預設均攤成員。<br>
-              • <b>待入帳提醒與一鍵帶入</b>：系統會自動比對目前帳本明細，尚未入帳的項目會在帳務頁頂部提示；點擊「新增帳務項目」頂部的膠囊即可一鍵帶入並自動對應原分攤成員。
+              • <b>建立與管理</b>：可從 <b>「我的明細 ➔ 定期支出設定」</b> 新增，或在新增一般支出時勾選 <b>「同時儲存為我的定期支出範本」</b>。金額可填 <span class="faq-code">0</span> 代表浮動帳單（如水電費），也可設定每月扣款日（1～31 號）。<br>
+              • <b>均攤記憶與待入帳提醒</b>：範本僅記憶<b>已綁定 LINE</b> 的成員以確保跨帳本精準對應（未綁定代管成員可於帶入時再手動勾選）；系統會自動比對目前帳本，尚未入帳的項目會在帳務頁頂部提示。
             </div>
           </details>
         </div>
@@ -1794,11 +1912,11 @@
 
           <details class="faq-item">
             <summary class="faq-q">
-              <span>8. 怎麼在 LINE 聊天室直接打字快速記帳？</span>
+              <span>9. 怎麼在 LINE 聊天室直接打字快速記帳？</span>
               <i class="fa-solid fa-chevron-down faq-chevron"></i>
             </summary>
             <div class="faq-a">
-              • <b>自由輸入</b>：在聊天室直接輸入 <span class="faq-code">項目 金額</span>（例如：<span class="faq-code">晚餐 600</span>）。<br>
+              • <b>自由輸入</b>：在聊天室直接輸入 <span class="faq-code">項目 金額</span>（例如：<span class="faq-code">晚餐 600</span>）。（註：聊天室快記以一般支出為主，贊助／補助款請開啟網頁切換類型輸入。）<br>
               • <b>定期支出帶入</b>：輸入 <span class="faq-code">定期</span>（或點擊快捷列「定期支出」）可查看個人定期清單與待入帳狀態，點擊固定金額項目即可直接產生草稿。<br>
               • <b>草稿防呆</b>：系統會先回傳 <b>「草稿確認卡」</b> 讓你核對目標帳本與金額，按下 <b>「✅ 確認入帳」</b> 才會正式儲存。
             </div>
@@ -1806,7 +1924,7 @@
 
           <details class="faq-item">
             <summary class="faq-q">
-              <span>9. 聊天室記帳如何指定墊付與均攤？成員編號去哪看？</span>
+              <span>10. 聊天室記帳如何指定墊付與均攤？成員編號去哪看？</span>
               <i class="fa-solid fa-chevron-down faq-chevron"></i>
             </summary>
             <div class="faq-a">
@@ -1819,7 +1937,7 @@
 
           <details class="faq-item">
             <summary class="faq-q">
-              <span>10. 電腦版 LINE 看不到下方圖文選單怎麼辦？</span>
+              <span>11. 電腦版 LINE 看不到下方圖文選單怎麼辦？</span>
               <i class="fa-solid fa-chevron-down faq-chevron"></i>
             </summary>
             <div class="faq-a">
@@ -1834,28 +1952,28 @@
 
           <details class="faq-item">
             <summary class="faq-q">
-              <span>11. 「最小轉帳結清路徑」是怎麼計算的？</span>
+              <span>12. 「最小轉帳結清路徑」是怎麼計算的？</span>
               <i class="fa-solid fa-chevron-down faq-chevron"></i>
             </summary>
             <div class="faq-a">
-              系統會統計每位成員「已預付」減去「應均攤」後的淨額（正數為應收、負數為應付），再透過演算法自動配對付款人與收款人，以<b>最少的轉帳次數</b>讓全員帳目歸零結清。
+              系統會統計每位成員「已預付」減去「應均攤」，再加上「贊助／補助款」後的最終淨額（正數為應收、負數為應付），再透過演算法自動配對付款人與收款人，以<b>最少的轉帳次數</b>讓全員帳目歸零結清。
             </div>
           </details>
 
           <details class="faq-item">
             <summary class="faq-q">
-              <span>12. 如何正式結算鎖定並保存帳務報表？</span>
+              <span>13. 如何正式結算鎖定並保存帳務報表？</span>
               <i class="fa-solid fa-chevron-down faq-chevron"></i>
             </summary>
             <div class="faq-a">
               • <b>正式結算</b>：帳本管理者可在 <b>「結算總覽」</b> 點擊「正式結算並鎖定帳本」，鎖定後全員變為唯讀並自動收到 LINE 結算通知。<br>
-              • <b>保存與分享</b>：所有成員隨時都可在「結算總覽」點擊 <b>「複製文字」</b> 貼到 LINE 群組，或點 <b>「匯出 CSV」</b> 下載 Excel 檔案保存。
+              • <b>保存與分享</b>：所有成員隨時都可在「結算總覽」點擊 <b>「複製文字」</b> 貼到 LINE 群組，或點 <b>「匯出 CSV」</b> 下載 Excel 檔案保存（含一般支出與贊助／補助款明細）。
             </div>
           </details>
 
           <details class="faq-item">
             <summary class="faq-q">
-              <span>13. 如何沿用固定成員、移交管理權限或刪除帳本？</span>
+              <span>14. 如何沿用固定成員、移交管理權限或刪除帳本？</span>
               <i class="fa-solid fa-chevron-down faq-chevron"></i>
             </summary>
             <div class="faq-a">
@@ -1928,7 +2046,7 @@
         </div>
         <div id="tplSplitMembersGrid" class="split-grid"></div>
         <div style="font-size:11.5px; color:var(--text-sub); margin-top:6px; line-height:1.45;">
-          系統會記住勾選的 LINE 成員；每月沿用成員建立新帳本時，帶入此範本將自動勾選相同分攤對象。
+          僅顯示已綁定 LINE 的成員（跨帳本開新帳時才能精準自動對應；未綁定代管成員可於實際帶入記帳時再手動勾選）。
         </div>
       </div>
 
@@ -2248,6 +2366,17 @@
 
       document.getElementById('ledgerTotalAmount').textContent = formatMoney(ledger.totalAmount);
 
+      const heroSubEl = document.getElementById('heroSubsidySub');
+      if (ledger.hasSubsidy) {
+        const netSpend = ledger.totalAmount - ledger.totalSubsidy;
+        heroSubEl.textContent = netSpend >= 0
+          ? '含贊助／補助 -$'+ ledger.totalSubsidy.toLocaleString() + '（實支 $' + netSpend.toLocaleString() + '）'
+          : '含贊助／補助款 $' + ledger.totalSubsidy.toLocaleString();
+        heroSubEl.classList.remove('hidden');
+      } else {
+        heroSubEl.classList.add('hidden');
+      }
+
       const heroNetEl = document.getElementById('heroMyNet');
       heroNetEl.textContent = formatNetMoney(personal.netBalance);
       heroNetEl.className = personal.netBalance > 0 ? 'text-green' : (personal.netBalance < 0 ? 'text-red' : '');
@@ -2342,12 +2471,28 @@
       }
 
       container.innerHTML = list.map(function (exp) {
+        const isSubsidy = exp.record_type === 'SUBSIDY';
         const perShare = exp.split_users.length > 0
           ? Math.round((exp.amount / exp.split_users.length) * 10) / 10
           : 0;
         const editBtnHtml = data.permissions.canEdit
           ? '<button class="edit-link" onclick="openExpenseModal(\'' + exp.expense_id + '\')"><i class="fa-solid fa-pen"></i> 編輯</button>'
           : '';
+
+        if (isSubsidy) {
+          return '<div class="expense-item is-subsidy">' +
+            '<div class="expense-main">' +
+            '<div class="expense-title"><i class="fa-solid fa-gift" style="color:var(--green); margin-right:4px;"></i>' + escapeHtml(exp.item_name) + '</div>' +
+            '<div class="expense-sub">' +
+            '<span class="subsidy-tag">' + escapeHtml(exp.payerName) + ' 贊助／補助</span>' +
+            '受惠 (' + exp.splitNames.length + '人)：' + escapeHtml(exp.splitNames.join('、')) +
+            '<br><span style="font-size:11px; opacity:0.85;">每人折抵 $' + perShare.toLocaleString() + '・' + escapeHtml(exp.created_at) + '</span>' +
+            '</div></div>' +
+            '<div class="expense-right">' +
+            '<div class="expense-amount text-green">折抵 -' + formatMoney(exp.amount) + '</div>' +
+            editBtnHtml +
+            '</div></div>';
+        }
 
         return '<div class="expense-item">' +
           '<div class="expense-main">' +
@@ -2366,8 +2511,22 @@
 
     function renderPersonalTab(data) {
       const p = data.personal;
+      const hasSubsidy = Boolean(data.ledger && data.ledger.hasSubsidy);
       document.getElementById('myTotalPaid').textContent = formatMoney(p.totalPaid);
       document.getElementById('myTotalShare').textContent = formatMoney(p.totalShare);
+
+      const personalGrid = document.getElementById('personalGrid');
+      const subsidyStatBox = document.getElementById('mySubsidyStatBox');
+      const subsidyNetEl = document.getElementById('mySubsidyNet');
+      if (hasSubsidy || p.subsidyNet !== 0) {
+        personalGrid.classList.add('has-subsidy');
+        subsidyStatBox.classList.remove('hidden');
+        subsidyNetEl.textContent = formatSignedMoney(p.subsidyNet || 0);
+        subsidyNetEl.className = p.subsidyNet > 0 ? 'text-green' : (p.subsidyNet < 0 ? 'text-red' : '');
+      } else {
+        personalGrid.classList.remove('has-subsidy');
+        subsidyStatBox.classList.add('hidden');
+      }
 
       const netEl = document.getElementById('myNetBalance');
       netEl.textContent = formatNetMoney(p.netBalance);
@@ -2422,6 +2581,37 @@
               '<div class="expense-amount text-red">-$' + item.myShare.toLocaleString() + '</div>' +
               '</div></div>';
           }).join('');
+
+      // 條件式顯示「我參與的贊助／補助款」區塊
+      const subsidyItems = p.subsidyItems || [];
+      const subsidyCard = document.getElementById('mySubsidyCard');
+      if (subsidyItems.length > 0) {
+        subsidyCard.classList.remove('hidden');
+        document.getElementById('mySubsidyCount').textContent = subsidyItems.length;
+        document.getElementById('mySubsidyList').innerHTML = subsidyItems.map(function (item) {
+          let desc = '';
+          if (item.isProvider && item.isBeneficiary) {
+            desc = '我提供 $' + item.totalAmount.toLocaleString() + '・與 ' + escapeHtml(item.splitNames.join('、')) + ' 平分（每人折抵 $' + item.perBenefit.toLocaleString() + '）';
+          } else if (item.isProvider) {
+            desc = '我提供 $' + item.totalAmount.toLocaleString() + ' 贊助給 ' + escapeHtml(item.splitNames.join('、')) + '（每人折抵 $' + item.perBenefit.toLocaleString() + '）';
+          } else {
+            desc = escapeHtml(item.providerName) + ' 提供 $' + item.totalAmount.toLocaleString() + '（共 ' + item.splitCount + ' 人受惠，我折抵 $' + item.perBenefit.toLocaleString() + '）';
+          }
+
+          const amtClass = item.myImpact > 0 ? 'text-green' : (item.myImpact < 0 ? 'text-red' : '');
+          const amtSign = item.myImpact > 0 ? '+' : (item.myImpact < 0 ? '-' : '');
+          return '<div class="expense-item">' +
+            '<div class="expense-main">' +
+            '<div class="expense-title">' + escapeHtml(item.item_name) + '</div>' +
+            '<div class="expense-sub">' + desc + '</div>' +
+            '</div>' +
+            '<div class="expense-right">' +
+            '<div class="expense-amount ' + amtClass + '">' + amtSign + '$' + Math.abs(item.myImpact).toLocaleString() + '</div>' +
+            '</div></div>';
+        }).join('');
+      } else {
+        subsidyCard.classList.add('hidden');
+      }
     }
 
     function renderSettlementTab(data) {
@@ -2444,10 +2634,17 @@
         }).join('');
       }
 
+      const hasSubsidy = Boolean(data.ledger && data.ledger.hasSubsidy);
+      const thSubsidy = document.getElementById('thSubsidyCol');
+      if (hasSubsidy) thSubsidy.classList.remove('hidden');
+      else thSubsidy.classList.add('hidden');
+
       const isAdmin = data.permissions.isCreator;
       const tbody = document.getElementById('memberSummaryBody');
       tbody.innerHTML = (data.memberSummaries || []).map(function (m, idx) {
         const netClass = m.netBalance > 0 ? 'text-green' : (m.netBalance < 0 ? 'text-red' : '');
+        const subVal = m.subsidyNet || 0;
+        const subClass = subVal > 0 ? 'text-green' : (subVal < 0 ? 'text-red' : '');
         const isMe = m.userId === currentUser.userId;
         const meLabel = isMe ? ' <span style="color:var(--text-sub); font-weight:normal;">(我)</span>' : '';
         const adminTag = m.userId === data.ledger.creator_id ? '<span class="admin-badge">管理者</span>' : '';
@@ -2462,10 +2659,15 @@
           ? '<button type="button" class="mini-icon-btn danger" onclick="openRemoveMemberModal(\'' + m.userId + '\')" title="移除成員"><i class="fa-solid fa-trash"></i></button>'
           : '';
 
+        const subsidyTd = hasSubsidy
+          ? '<td class="num-col ' + subClass + '" style="font-weight:700;">' + formatSignedMoney(subVal) + '</td>'
+          : '';
+
         return '<tr>' +
           '<td style="font-weight:700;">' + numBadge + escapeHtml(m.nickname) + meLabel + adminTag + guestTag + renameBtn + removeBtn + '</td>' +
           '<td class="num-col">' + formatMoney(m.totalPaid) + '</td>' +
           '<td class="num-col">' + formatMoney(m.totalShare) + '</td>' +
+          subsidyTd +
           '<td class="num-col ' + netClass + '" style="font-weight:800;">' + formatNetMoney(m.netBalance) + '</td>' +
           '</tr>';
       }).join('');
@@ -2900,6 +3102,10 @@
         '📌 個人收支淨額：'
       ];
 
+      if (l.hasSubsidy) {
+        lines.push('🎁 贊助／補助款折抵：-$' + l.totalSubsidy.toLocaleString());
+      }
+
       (data.memberSummaries || []).forEach(function (m) {
         const guestSuffix = m.isGuest ? ' (未綁定)' : '';
         const netStr = m.netBalance > 0
@@ -2956,13 +3162,16 @@
       addRow(['帳本名稱', l.title]);
       addRow(['帳本狀態', l.status === 'SETTLED' ? '已正式結算鎖定' : '進行中（試算）']);
       addRow(['帳本總支出', l.totalAmount]);
+      if (l.hasSubsidy) {
+        addRow(['贊助／補助款總額', l.totalSubsidy]);
+      }
       if (l.settled_at) {
         addRow(['結算時間', l.settled_at]);
       }
       rows.push('');
 
       addRow(['【一、成員墊付與結算統計】']);
-      addRow(['編號', '成員暱稱', '帳號狀態', '已預先支付', '均攤應付總額', '結算淨額（正數應收／負數應付）']);
+      addRow(['編號', '成員暱稱', '帳號狀態', '已預先支付', '均攤應付總額', '贊助／補助款淨額', '結算淨額（正數應收／負數應付）']);
       (data.memberSummaries || []).forEach(function (m, idx) {
         addRow([
           idx + 1,
@@ -2970,6 +3179,7 @@
           m.isGuest ? '未綁定代管' : 'LINE 帳號',
           m.totalPaid,
           m.totalShare,
+          m.subsidyNet || 0,
           m.netBalance
         ]);
       });
@@ -2987,16 +3197,17 @@
       rows.push('');
 
       addRow(['【三、所有帳務明細】']);
-      addRow(['序號', '建立時間', '項目名稱', '支付金額', '預先支付人', '均攤人數', '每人平均分攤', '均攤成員名單']);
+      addRow(['序號', '類型', '建立時間', '項目名稱', '金額', '墊付人／提供人', '分攤或受惠人數', '每人均攤／折抵', '對象成員名單']);
       const chronologicalExpenses = (data.expenses || []).slice().reverse();
       if (chronologicalExpenses.length === 0) {
-        addRow(['-', '-', '尚無帳務紀錄', 0, '-', 0, 0, '-']);
+        addRow(['-', '-', '-', '尚無帳務紀錄', 0, '-', 0, 0, '-']);
       } else {
         chronologicalExpenses.forEach(function (exp, idx) {
           const splitCount = exp.split_users ? exp.split_users.length : 0;
           const perShare = splitCount > 0 ? Math.round((exp.amount / splitCount) * 10) / 10 : 0;
           addRow([
             idx + 1,
+            exp.record_type === 'SUBSIDY' ? '贊助／補助款' : '一般支出',
             exp.created_at,
             exp.item_name,
             exp.amount,
@@ -3032,14 +3243,58 @@
       }
     }
 
+    function setExpenseRecordType(type) {
+      const normalized = type === 'SUBSIDY' ? 'SUBSIDY' : 'EXPENSE';
+      const isSubsidy = normalized === 'SUBSIDY';
+      document.getElementById('expRecordType').value = normalized;
+
+      document.getElementById('btnTypeExpense').className = 'record-type-btn' + (!isSubsidy ? ' active-expense' : '');
+      document.getElementById('btnTypeSubsidy').className = 'record-type-btn' + (isSubsidy ? ' active-subsidy' : '');
+
+      // 切換為「贊助／補助款」時自動隱藏定期支出相關區塊
+      const quickRecSec = document.getElementById('quickRecurringSection');
+      const saveRecSec = document.getElementById('saveAsRecurringSection');
+      if (isSubsidy) {
+        quickRecSec.classList.add('hidden');
+        saveRecSec.classList.add('hidden');
+        document.getElementById('saveAsRecurringCheckbox').checked = false;
+        document.getElementById('recurringBillingDayWrap').classList.add('hidden');
+      } else {
+        quickRecSec.classList.remove('hidden');
+        saveRecSec.classList.remove('hidden');
+      }
+
+      document.getElementById('expItemName').placeholder = isSubsidy
+        ? '例如：旅遊補助款、長輩贊助金、刷卡回饋'
+        : '例如：第一天晚餐、租車費、門票';
+      document.getElementById('expAmountLabel').textContent = isSubsidy ? '贊助／補助金額' : '支付金額';
+      document.getElementById('expPayerLabel').textContent = isSubsidy ? '誰提供／領取這筆款項' : '誰預先支付（墊付人）';
+      document.getElementById('expSplitLabel').textContent = isSubsidy ? '哪些人共同享有折抵（受惠成員）' : '哪些人均攤應付';
+
+      const payerHint = document.getElementById('expPayerHint');
+      const subsidyHint = document.getElementById('expSubsidySplitHint');
+      const saveBtn = document.getElementById('btnSaveExpense');
+      if (isSubsidy) {
+        payerHint.classList.remove('hidden');
+        subsidyHint.classList.remove('hidden');
+        saveBtn.style.background = 'var(--green)';
+        saveBtn.style.boxShadow = '0 4px 12px rgba(35, 134, 83, 0.28)';
+      } else {
+        payerHint.classList.add('hidden');
+        subsidyHint.classList.add('hidden');
+        saveBtn.style.background = '';
+        saveBtn.style.boxShadow = '';
+      }
+
+      updateSplitPreview();
+    }
+
     function openExpenseModal(expenseId, prefillData) {
       const data = appState.activeLedgerData;
       if (!data || !data.permissions.canEdit) return;
 
-      // 渲染快速帶入定期支出膠囊列
       renderQuickRecurringChips();
 
-      // 重置「同時儲存為定期範本」勾選狀態
       document.getElementById('saveAsRecurringCheckbox').checked = false;
       document.getElementById('recurringBillingDayWrap').classList.add('hidden');
       document.getElementById('saveAsRecurringDay').value = '';
@@ -3084,13 +3339,10 @@
       setExpenseSplitSelection(selectedSplitIds);
 
       const delBtn = document.getElementById('btnDeleteExpense');
-      if (targetExpense) {
-        delBtn.classList.remove('hidden');
-      } else {
-        delBtn.classList.add('hidden');
-      }
+      if (targetExpense) delBtn.classList.remove('hidden');
+      else delBtn.classList.add('hidden');
 
-      updateSplitPreview();
+      setExpenseRecordType(targetExpense ? targetExpense.record_type : 'EXPENSE');
       openModal('expenseModal');
     }
 
@@ -3132,29 +3384,34 @@
     }
 
     function updateSplitPreview() {
+      const isSubsidy = document.getElementById('expRecordType').value === 'SUBSIDY';
       const amt = Number(document.getElementById('expAmount').value);
       const checkedCount = document.querySelectorAll('input[name="splitUser"]:checked').length;
       const previewEl = document.getElementById('splitPreviewBox');
 
       if (checkedCount === 0) {
-        previewEl.textContent = '請至少勾選 1 位均攤成員';
+        previewEl.textContent = isSubsidy ? '請至少勾選 1 位受惠成員' : '請至少勾選 1 位均攤成員';
       } else if (!amt || amt <= 0) {
-        previewEl.textContent = '已選 ' + checkedCount + ' 人均攤';
+        previewEl.textContent = isSubsidy ? ('已選 ' + checkedCount + ' 人共同受惠') : ('已選 ' + checkedCount + ' 人均攤');
       } else {
         const perPerson = Math.round((amt / checkedCount) * 10) / 10;
-        previewEl.innerHTML = '共 <b>' + checkedCount + '</b> 人均攤，每人約 <b>$' + perPerson.toLocaleString() + '</b>';
+        previewEl.innerHTML = isSubsidy
+          ? '共 <b>' + checkedCount + '</b> 人受惠，每人折抵 <b>$' + perPerson.toLocaleString() + '</b>'
+          : '共 <b>' + checkedCount + '</b> 人均攤，每人約 <b>$' + perPerson.toLocaleString() + '</b>';
       }
     }
 
     function submitExpenseForm() {
       const expenseId = document.getElementById('editExpenseId').value;
+      const recordType = document.getElementById('expRecordType').value === 'SUBSIDY' ? 'SUBSIDY' : 'EXPENSE';
+      const isSubsidy = recordType === 'SUBSIDY';
       const itemName = document.getElementById('expItemName').value.trim();
       const amount = Number(document.getElementById('expAmount').value);
       const payerId = document.getElementById('expPayerSelect').value;
       const splitUsers = Array.from(document.querySelectorAll('input[name="splitUser"]:checked'))
         .map(function (cb) { return cb.value; });
 
-      const saveAsRecurring = document.getElementById('saveAsRecurringCheckbox').checked;
+      const saveAsRecurring = !isSubsidy && document.getElementById('saveAsRecurringCheckbox').checked;
       const billingDay = document.getElementById('saveAsRecurringDay').value;
 
       if (!itemName) {
@@ -3166,7 +3423,7 @@
         return;
       }
       if (splitUsers.length === 0) {
-        showToast('請至少勾選一位均攤成員');
+        showToast(isSubsidy ? '請至少勾選一位受惠成員' : '請至少勾選一位均攤成員');
         return;
       }
 
@@ -3176,6 +3433,7 @@
         ledgerId: appState.activeLedgerId,
         expense: {
           expense_id: expenseId || null,
+          record_type: recordType,
           item_name: itemName,
           amount: amount,
           payer_id: payerId,
@@ -3193,9 +3451,9 @@
       const templates = (appState && appState.recurringTemplates) || [];
       const data = appState && appState.activeLedgerData;
       const loggedNameSet = new Set(
-        ((data && data.expenses) || []).map(function (e) {
-          return String(e.item_name || '').trim().toLowerCase();
-        })
+        ((data && data.expenses) || [])
+          .filter(function (e) { return (e.record_type || 'EXPENSE') !== 'SUBSIDY'; })
+          .map(function (e) { return String(e.item_name || '').trim().toLowerCase(); })
       );
 
       const enriched = templates.map(function (tpl) {
@@ -3369,23 +3627,26 @@
       document.getElementById('tplBillingDay').value = (target && target.billing_day > 0) ? target.billing_day : '';
 
       const data = appState && appState.activeLedgerData;
-      const members = (data && data.members) || [];
-      const selectedSet = new Set(target && target.split_users && target.split_users.length > 0
-        ? target.split_users
-        : members.map(function (m) { return m.userId; })
+      // 僅列出已綁定 LINE 的真實成員，排除未綁定代管成員避免跨帳本無法對應
+      const boundMembers = ((data && data.members) || []).filter(function (m) { return !m.isGuest; });
+      const savedSplits = (target && target.split_users || []).filter(function (uid) {
+        return boundMembers.some(function (m) { return m.userId === uid; });
+      });
+      const selectedSet = new Set(
+        savedSplits.length > 0
+          ? savedSplits
+          : boundMembers.map(function (m) { return m.userId; })
       );
 
       const grid = document.getElementById('tplSplitMembersGrid');
-      if (members.length === 0) {
-        grid.innerHTML = '<div style="grid-column:1/-1; font-size:12px; color:var(--text-sub);">加入帳本後即可在此勾選預設均攤成員（目前將預設為全員均攤）。</div>';
+      if (boundMembers.length === 0) {
+        grid.innerHTML = '<div style="grid-column:1/-1; font-size:12px; color:var(--text-sub);">加入帳本後即可在此勾選已綁定 LINE 的預設均攤成員（目前將預設為全員均攤）。</div>';
       } else {
-        grid.innerHTML = members.map(function (m) {
+        grid.innerHTML = boundMembers.map(function (m) {
           const isChecked = selectedSet.has(m.userId);
-          const guestBadge = m.isGuest ? '<span class="guest-badge">未綁定</span>' : '';
           return '<label class="split-chip ' + (isChecked ? 'checked' : '') + '" onclick="onToggleTplSplitChip(this)">' +
             '<input type="checkbox" name="tplSplitUser" value="' + m.userId + '" ' + (isChecked ? 'checked' : '') + ' />' +
             '<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + escapeHtml(m.nickname) + '</span>' +
-            guestBadge +
             '</label>';
         }).join('');
       }
@@ -3598,6 +3859,13 @@
       if (n > 0) return '應收 +$' + n.toLocaleString();
       if (n < 0) return '應付 -$' + Math.abs(n).toLocaleString();
       return '$0 (已打平)';
+    }
+
+    function formatSignedMoney(num) {
+      const n = Math.round(Number(num || 0));
+      if (n > 0) return '+$' + n.toLocaleString();
+      if (n < 0) return '-$' + Math.abs(n).toLocaleString();
+      return '$0';
     }
 
     function escapeHtml(str) {
