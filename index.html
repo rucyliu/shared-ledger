@@ -2368,10 +2368,7 @@
 
       const heroSubEl = document.getElementById('heroSubsidySub');
       if (ledger.hasSubsidy) {
-        const netSpend = ledger.totalAmount - ledger.totalSubsidy;
-        heroSubEl.textContent = netSpend >= 0
-          ? '含贊助／補助 -$'+ ledger.totalSubsidy.toLocaleString() + '（實支 $' + netSpend.toLocaleString() + '）'
-          : '含贊助／補助款 $' + ledger.totalSubsidy.toLocaleString();
+        heroSubEl.textContent = '含贊助／補助折抵 -$' + ledger.totalSubsidy.toLocaleString();
         heroSubEl.classList.remove('hidden');
       } else {
         heroSubEl.classList.add('hidden');
@@ -3097,14 +3094,15 @@
       const statusText = l.status === 'SETTLED' ? '🔒 已正式結算' : '🟢 記帳進行中試算';
       const lines = [
         '📊【' + l.title + '】結算總覽 (' + statusText + ')',
-        '💰 帳本總支出：$' + l.totalAmount.toLocaleString(),
-        '------------------------',
-        '📌 個人收支淨額：'
+        '💰 帳本總支出：$' + l.totalAmount.toLocaleString()
       ];
 
       if (l.hasSubsidy) {
         lines.push('🎁 贊助／補助款折抵：-$' + l.totalSubsidy.toLocaleString());
       }
+
+      lines.push('------------------------');
+      lines.push('📌 個人收支淨額：');
 
       (data.memberSummaries || []).forEach(function (m) {
         const guestSuffix = m.isGuest ? ' (未綁定)' : '';
