@@ -15,8 +15,51 @@ let pendingInviteChoiceData = null;
 let selectedClaimGuest = null;
 let pendingPrefillDraft = null;
 let reopenRecurringManage = false;
+
+// SWR 快取、請求序號與背景同步狀態
 let apiRequestSeq = 0;
 let lastRenderedStateJson = '';
+let lastSyncAt = 0;
+let activeSilentSyncCount = 0;
+
+// 編輯帳務二段式防誤刪狀態
+let deleteExpenseArmed = false;
+let deleteExpenseArmTimer = null;
+
+// 帳務明細即時搜尋與篩選狀態
+let lastFilterLedgerId = '';
+let expenseSearchKeyword = '';
+let expensePayerFilter = 'ALL';
+
+// 彈窗裝置返回鍵攔截狀態（單一歷史守衛，避免多層彈窗切換造成歷史堆疊）
+let hasModalHistoryGuard = false;
+let ignoreNextPopState = false;
+let modalHistorySyncTimer = null;
+
+function isRunningInLineClient() {
+    return !isMockMode && typeof liff !== 'undefined' && liff.isInClient && liff.isInClient();
+}
+
+function getLiffIdTokenSafe() {
+    if (isMockMode || typeof liff === 'undefined' || !liff.getIDToken) return '';
+    try {
+        return liff.getIDToken() || '';
+    } catch (e) {
+        return '';
+    }
+}
+
+function updateCsvExportButtonUi() {
+    const btn = document.getElementById('btnExportCsv');
+    if (!btn) return;
+    if (isRunningInLineClient()) {
+        btn.innerHTML = '<i class="fa-solid fa-arrow-up-right-from-square"></i> 外部開啟匯出';
+        btn.title = 'LINE 內建視窗不支援下載檔案，點擊改由外部瀏覽器開啟後即可匯出 CSV';
+    } else {
+        btn.innerHTML = '<i class="fa-solid fa-file-csv"></i> 匯出 CSV';
+        btn.title = '匯出 CSV 明細報表';
+    }
+}
 
 function getLocalCacheKey(userId) {
     return 'shared_ledger_state_v1_' + userId;
@@ -167,6 +210,7 @@ function extractPrefillFromUrl() {
         };
 
         checkOfficialAccountFriendship();
+        updateCsvExportButtonUi();
 
         const finalInviteCode = localStorage.getItem('pending_invite_code') || '';
         if (finalInviteCode) {
@@ -230,40 +274,64 @@ async function checkOfficialAccountFriendship() {
 }
 
 function openAddOfficialAccount() {
-    if (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient()) {
+    if (isRunningInLineClient()) {
         liff.openWindow({ url: OA_ADD_FRIEND_URL, external: false });
     } else {
         window.open(OA_ADD_FRIEND_URL, '_blank');
     }
 }
 
+function manualRefreshApp() {
+    if (!currentUser || activeSilentSyncCount > 0) return;
+    callGasApi('bootstrap', {
+        userProfile: currentUser,
+        inviteCode: ''
+    }, '', { silent: true, manualRefresh: true });
+}
+
 document.addEventListener('visibilitychange', function () {
     if (document.visibilityState === 'visible' && currentUser) {
         checkOfficialAccountFriendship();
+        // 切回前景且距離上次同步超過 15 秒時，背景靜默同步最新帳務
+        if (activeSilentSyncCount === 0 && (Date.now() - lastSyncAt > 15000)) {
+            callGasApi('bootstrap', {
+                userProfile: currentUser,
+                inviteCode: ''
+            }, '', { silent: true });
+        }
     }
 });
 
 // =========================================================================
-// 2. 透過 fetch 呼叫 GAS 純 JSON API（支援靜默同步、請求序號保護與本地快取）
+// 2. 透過 fetch 呼叫 GAS 純 JSON API（附帶 ID Token、靜默同步與快取防覆蓋）
 // =========================================================================
 async function callGasApi(action, payloadObj, loadingMsg, options) {
     const isSilent = Boolean(options && options.silent);
+    const isManualRefresh = Boolean(options && options.manualRefresh);
     const reqSeq = ++apiRequestSeq;
+    const refreshBtn = document.getElementById('btnManualRefresh');
 
     if (isSilent) {
+        activeSilentSyncCount++;
         showSyncPill(true);
+        if (isManualRefresh && refreshBtn) refreshBtn.classList.add('syncing');
     } else {
         showSyncPill(false);
         showLoading(loadingMsg || '處理中...');
     }
 
     try {
+        const bodyObj = Object.assign({
+            api_action: action,
+            idToken: getLiffIdTokenSafe()
+        }, payloadObj);
+
         const response = await fetch(GAS_API_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'text/plain;charset=utf-8'
             },
-            body: JSON.stringify(Object.assign({ api_action: action }, payloadObj))
+            body: JSON.stringify(bodyObj)
         });
 
         if (!response.ok) {
@@ -272,6 +340,12 @@ async function callGasApi(action, payloadObj, loadingMsg, options) {
 
         const json = await response.json();
         if (!json.ok) {
+            if (json.error === 'AUTH_EXPIRED' && !isMockMode && typeof liff !== 'undefined') {
+                if (!isSilent) hideLoading();
+                showToast('LINE 登入憑證已過期，正在重新驗證...', 3000);
+                setTimeout(function () { liff.login(); }, 800);
+                return;
+            }
             throw new Error(json.error || '操作失敗');
         }
 
@@ -280,6 +354,7 @@ async function callGasApi(action, payloadObj, loadingMsg, options) {
             return;
         }
 
+        lastSyncAt = Date.now();
         const nextState = json.data;
         const nextComparableJson = buildComparableStateJson(nextState);
 
@@ -288,12 +363,15 @@ async function callGasApi(action, payloadObj, loadingMsg, options) {
         }
 
         if (isSilent) {
-            showSyncPill(false);
             // 若資料毫無變動且沒有需要顯示的提示或認領彈窗，跳過重複重繪避免畫面閃動
             if (nextComparableJson && nextComparableJson === lastRenderedStateJson &&
                 !nextState.toastMessage && !nextState.pendingInviteChoice) {
                 appState = nextState;
+                if (isManualRefresh) showToast('目前已是最新帳務資料', 2200);
                 return;
+            }
+            if (isManualRefresh && !nextState.toastMessage) {
+                showToast('已同步最新帳務資料', 2200);
             }
         } else {
             hideLoading();
@@ -307,13 +385,20 @@ async function callGasApi(action, payloadObj, loadingMsg, options) {
         }
     } catch (err) {
         if (isSilent) {
-            showSyncPill(false);
             if (reqSeq === apiRequestSeq) {
-                showToast('背景同步失敗，目前顯示為上次快取資料', 3500);
+                showToast(isManualRefresh ? (err.message || '同步失敗，請稍後再試') : '背景同步失敗，目前顯示為上次快取資料', 3500);
             }
         } else {
             hideLoading();
             showToast(err.message || '網路連線發生錯誤，請稍後再試', 4500);
+        }
+    } finally {
+        if (isSilent) {
+            activeSilentSyncCount = Math.max(0, activeSilentSyncCount - 1);
+            if (activeSilentSyncCount === 0) {
+                showSyncPill(false);
+                if (refreshBtn) refreshBtn.classList.remove('syncing');
+            }
         }
     }
 }
@@ -476,17 +561,109 @@ function renderAppState(state) {
 }
 
 function renderExpensesTab(data) {
+    const ledgerId = data && data.ledger ? data.ledger.ledger_id : '';
     const list = data.expenses || [];
-    document.getElementById('expenseCount').textContent = list.length;
-    const container = document.getElementById('expenseListContainer');
+    const filterBar = document.getElementById('expenseFilterBar');
+    const searchInput = document.getElementById('expenseSearchInput');
+    const payerSelect = document.getElementById('expensePayerFilter');
 
-    if (list.length === 0) {
+    // 切換帳本時重置搜尋與篩選條件
+    if (ledgerId !== lastFilterLedgerId) {
+        lastFilterLedgerId = ledgerId;
+        expenseSearchKeyword = '';
+        expensePayerFilter = 'ALL';
+        if (searchInput) searchInput.value = '';
+    }
+
+    if (filterBar && payerSelect) {
+        if (list.length > 0) {
+            filterBar.classList.remove('hidden');
+            let optionsHtml = '<option value="ALL">全部對象</option>';
+            if (data.ledger && data.ledger.hasSubsidy) {
+                optionsHtml += '<option value="TYPE_SUBSIDY">🎁 僅贊助／補助</option>';
+            }
+            (data.members || []).forEach(function (m) {
+                const suffix = m.userId === currentUser.userId ? ' (我)' : '';
+                optionsHtml += '<option value="' + m.userId + '">' + escapeHtml(m.nickname) + suffix + '</option>';
+            });
+            payerSelect.innerHTML = optionsHtml;
+
+            const validValues = new Set(Array.from(payerSelect.options).map(function (o) { return o.value; }));
+            if (!validValues.has(expensePayerFilter)) {
+                expensePayerFilter = 'ALL';
+            }
+            payerSelect.value = expensePayerFilter;
+        } else {
+            filterBar.classList.add('hidden');
+        }
+    }
+
+    renderFilteredExpensesList();
+}
+
+function onExpenseFilterChange() {
+    const searchEl = document.getElementById('expenseSearchInput');
+    const payerEl = document.getElementById('expensePayerFilter');
+    expenseSearchKeyword = searchEl ? searchEl.value.trim().toLowerCase() : '';
+    expensePayerFilter = payerEl ? payerEl.value : 'ALL';
+    renderFilteredExpensesList();
+}
+
+function clearExpenseFilters() {
+    expenseSearchKeyword = '';
+    expensePayerFilter = 'ALL';
+    const searchEl = document.getElementById('expenseSearchInput');
+    const payerEl = document.getElementById('expensePayerFilter');
+    if (searchEl) searchEl.value = '';
+    if (payerEl) payerEl.value = 'ALL';
+    renderFilteredExpensesList();
+}
+
+function renderFilteredExpensesList() {
+    const data = appState && appState.activeLedgerData;
+    if (!data) return;
+
+    const allList = data.expenses || [];
+    const container = document.getElementById('expenseListContainer');
+    const isFiltering = Boolean(expenseSearchKeyword || expensePayerFilter !== 'ALL');
+
+    const filtered = allList.filter(function (exp) {
+        if (expensePayerFilter === 'TYPE_SUBSIDY') {
+            if (exp.record_type !== 'SUBSIDY') return false;
+        } else if (expensePayerFilter !== 'ALL') {
+            if (exp.payer_id !== expensePayerFilter) return false;
+        }
+
+        if (expenseSearchKeyword) {
+            const haystack = (
+                String(exp.item_name || '') + ' ' +
+                String(exp.payerName || '') + ' ' +
+                (exp.splitNames || []).join(' ')
+            ).toLowerCase();
+            if (haystack.indexOf(expenseSearchKeyword) === -1) return false;
+        }
+        return true;
+    });
+
+    document.getElementById('expenseCount').textContent = isFiltering
+        ? (filtered.length + ' / ' + allList.length)
+        : String(allList.length);
+
+    if (allList.length === 0) {
         container.innerHTML = '<div style="text-align:center; padding:24px 0; color:var(--text-sub); font-size:13px;">' +
             '目前還沒有任何帳務紀錄，點擊下方「新增帳務項目」開始吧！</div>';
         return;
     }
 
-    container.innerHTML = list.map(function (exp) {
+    if (filtered.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding:22px 0; color:var(--text-sub); font-size:13px;">' +
+            '找不到符合篩選條件的帳務項目<br>' +
+            '<button type="button" class="edit-link" style="margin-top:8px;" onclick="clearExpenseFilters()">清除篩選條件</button>' +
+            '</div>';
+        return;
+    }
+
+    container.innerHTML = filtered.map(function (exp) {
         const isSubsidy = exp.record_type === 'SUBSIDY';
         const perShare = exp.split_users.length > 0
             ? Math.round((exp.amount / exp.split_users.length) * 10) / 10
@@ -631,6 +808,7 @@ function renderPersonalTab(data) {
 }
 
 function renderSettlementTab(data) {
+    updateCsvExportButtonUi();
     const transfers = data.transfers || [];
     const transContainer = document.getElementById('allTransferList');
 
@@ -1156,7 +1334,7 @@ async function copyTextSettlementReport() {
     }
 }
 
-// --- 匯出 CSV 明細報表（含 UTF-8 BOM 防 Excel 亂碼） ---
+// --- 匯出 CSV 明細報表（LINE 內建視窗自動改用外部瀏覽器開啟；含 UTF-8 BOM 防 Excel 亂碼） ---
 function escapeCsvCell(val) {
     const str = String(val === null || val === undefined ? '' : val);
     if (/[",\r\n]/.test(str)) {
@@ -1166,6 +1344,12 @@ function escapeCsvCell(val) {
 }
 
 function exportLedgerCsv() {
+    if (isRunningInLineClient()) {
+        showToast('正在改用外部瀏覽器開啟，請於瀏覽器中點擊「匯出 CSV」下載', 3500);
+        liff.openWindow({ url: window.location.href, external: true });
+        return;
+    }
+
     const data = appState && appState.activeLedgerData;
     if (!data) return;
 
@@ -1252,12 +1436,7 @@ function exportLedgerCsv() {
     document.body.removeChild(link);
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
 
-    const isLineInApp = (typeof liff !== 'undefined' && liff.isInClient && liff.isInClient());
-    if (isLineInApp) {
-        showToast('已執行匯出！若 LINE 內建視窗未自動儲存，請改用其他瀏覽器開啟後下載', 5000);
-    } else {
-        showToast('已下載「' + fileName + '」');
-    }
+    showToast('已下載「' + fileName + '」');
 }
 
 function setExpenseRecordType(type) {
@@ -1310,6 +1489,7 @@ function openExpenseModal(expenseId, prefillData) {
     const data = appState.activeLedgerData;
     if (!data || !data.permissions.canEdit) return;
 
+    resetDeleteExpenseArm();
     renderQuickRecurringChips();
 
     document.getElementById('saveAsRecurringCheckbox').checked = false;
@@ -1461,6 +1641,43 @@ function submitExpenseForm() {
     }, expenseId ? '正在更新帳務...' : '正在儲存帳務...');
 }
 
+// --- 編輯帳務二段式防誤刪 ---
+function resetDeleteExpenseArm() {
+    deleteExpenseArmed = false;
+    clearTimeout(deleteExpenseArmTimer);
+    deleteExpenseArmTimer = null;
+    const btn = document.getElementById('btnDeleteExpense');
+    if (btn) {
+        btn.classList.remove('btn-delete-armed');
+        btn.innerHTML = '<i class="fa-solid fa-trash"></i> 刪除';
+    }
+}
+
+function confirmDeleteCurrentExpense() {
+    const expenseId = document.getElementById('editExpenseId').value;
+    if (!expenseId) return;
+
+    if (!deleteExpenseArmed) {
+        deleteExpenseArmed = true;
+        const btn = document.getElementById('btnDeleteExpense');
+        if (btn) {
+            btn.classList.add('btn-delete-armed');
+            btn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 確定刪除？';
+        }
+        clearTimeout(deleteExpenseArmTimer);
+        deleteExpenseArmTimer = setTimeout(resetDeleteExpenseArm, 3000);
+        return;
+    }
+
+    resetDeleteExpenseArm();
+    closeModal('expenseModal');
+    callGasApi('deleteExpense', {
+        userId: currentUser.userId,
+        ledgerId: appState.activeLedgerId,
+        expenseId: expenseId
+    }, '正在刪除帳務...');
+}
+
 // =========================================================================
 // 4.5 個人定期支出項目管理與快速帶入邏輯
 // =========================================================================
@@ -1478,7 +1695,6 @@ function getEnrichedRecurringTemplates() {
         return Object.assign({}, tpl, { isLoggedInActive: isLogged });
     });
 
-    // 待入帳排前面，再依每月扣款日由小到大排序
     enriched.sort(function (a, b) {
         if (a.isLoggedInActive !== b.isLoggedInActive) {
             return a.isLoggedInActive ? 1 : -1;
@@ -1533,7 +1749,6 @@ function applyRecurringTemplateToExpense(templateId) {
     document.getElementById('expItemName').value = tpl.item_name;
     document.getElementById('expPayerSelect').value = currentUser.userId;
 
-    // 智慧對應記憶的均攤成員（若在目前帳本找不到吻合對象，則安全退回全員均攤）
     const ledgerMemberIds = (data.members || []).map(function (m) { return m.userId; });
     const ledgerMemberSet = new Set(ledgerMemberIds);
     const matchedSplits = (tpl.split_users || []).filter(function (uid) { return ledgerMemberSet.has(uid); });
@@ -1752,7 +1967,7 @@ function executeDeleteRecurringTemplate() {
 }
 
 // =========================================================================
-// 4.6 帳務操作歷程（按需分頁載入，每次 10 筆）
+// 4.6 帳務操作歷程（按需分頁載入，每次 10 筆，附帶 ID Token）
 // =========================================================================
 let activityLogState = {
     filter: 'ALL',
@@ -1816,6 +2031,7 @@ async function fetchActivityLogsPage(isAppend) {
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify({
                 api_action: 'getActivityLogs',
+                idToken: getLiffIdTokenSafe(),
                 userId: currentUser.userId,
                 ledgerId: appState.activeLedgerId,
                 filter: activityLogState.filter,
@@ -1826,7 +2042,14 @@ async function fetchActivityLogsPage(isAppend) {
 
         if (!response.ok) throw new Error('伺服器連線異常 (HTTP ' + response.status + ')');
         const json = await response.json();
-        if (!json.ok) throw new Error(json.error || '讀取歷程失敗');
+        if (!json.ok) {
+            if (json.error === 'AUTH_EXPIRED' && !isMockMode && typeof liff !== 'undefined') {
+                showToast('LINE 登入憑證已過期，正在重新驗證...', 3000);
+                setTimeout(function () { liff.login(); }, 800);
+                return;
+            }
+            throw new Error(json.error || '讀取歷程失敗');
+        }
 
         const resData = json.data || {};
         const newItems = resData.logs || [];
@@ -1903,17 +2126,6 @@ function renderActivityLogList() {
     }
 }
 
-function confirmDeleteCurrentExpense() {
-    const expenseId = document.getElementById('editExpenseId').value;
-    if (!expenseId) return;
-    closeModal('expenseModal');
-    callGasApi('deleteExpense', {
-        userId: currentUser.userId,
-        ledgerId: appState.activeLedgerId,
-        expenseId: expenseId
-    }, '正在刪除帳務...');
-}
-
 function openShareModal() {
     const ledger = appState.activeLedgerData.ledger;
     document.getElementById('modalInviteCodeBadge').textContent = ledger.invite_code;
@@ -1962,38 +2174,106 @@ async function shareViaLinePicker() {
     }
 }
 
+function openConfirmSettleModal() {
+    const cb = document.getElementById('settleNotifyCheckbox');
+    if (cb) cb.checked = true;
+    openModal('confirmSettleModal');
+}
+
 function executeSettleLedger() {
+    const cb = document.getElementById('settleNotifyCheckbox');
+    const notifyMembers = cb ? cb.checked : true;
     closeModal('confirmSettleModal');
     callGasApi('settleLedger', {
         userId: currentUser.userId,
-        ledgerId: appState.activeLedgerId
-    }, '正在結算並鎖定帳本...');
+        ledgerId: appState.activeLedgerId,
+        notifyMembers: notifyMembers
+    }, notifyMembers ? '正在結算鎖定並推播通知...' : '正在靜默結算並鎖定帳本...');
 }
 
 // =========================================================================
-// 5. UI 輔助工具（含點擊遮罩與 Escape 鍵關閉彈窗）
+// 5. UI 輔助工具（點擊遮罩、Escape 鍵與手機裝置返回鍵只關閉彈窗不跳出網頁）
 // =========================================================================
+function getOpenModals() {
+    return Array.from(document.querySelectorAll('.modal-backdrop.open'));
+}
+
+function scheduleModalHistoryCleanup() {
+    clearTimeout(modalHistorySyncTimer);
+    modalHistorySyncTimer = setTimeout(function () {
+        if (getOpenModals().length === 0 && hasModalHistoryGuard) {
+            hasModalHistoryGuard = false;
+            ignoreNextPopState = true;
+            window.history.back();
+        }
+    }, 0);
+}
+
 function openModal(id) {
-    document.getElementById(id).classList.add('open');
+    const modal = document.getElementById(id);
+    if (!modal) return;
+
+    clearTimeout(modalHistorySyncTimer);
+    modal.classList.add('open');
+
+    const scrollArea = modal.querySelector('.modal-body') || modal.querySelector('.modal-sheet');
+    if (scrollArea) scrollArea.scrollTop = 0;
+
+    if (!hasModalHistoryGuard && window.history && window.history.pushState) {
+        try {
+            window.history.pushState({ modalGuard: true }, '', window.location.href);
+            hasModalHistoryGuard = true;
+        } catch (e) { }
+    }
 }
 
-function closeModal(id) {
-    document.getElementById(id).classList.remove('open');
+function closeModal(id, fromPopState) {
+    const modal = document.getElementById(id);
+    if (modal) {
+        modal.classList.remove('open');
+    }
+    if (id === 'expenseModal') {
+        resetDeleteExpenseArm();
+    }
+    if (!fromPopState) {
+        scheduleModalHistoryCleanup();
+    }
+}
+
+function closeAllOpenModals(fromPopState) {
+    getOpenModals().forEach(function (el) {
+        el.classList.remove('open');
+    });
+    resetDeleteExpenseArm();
+    if (!fromPopState) {
+        scheduleModalHistoryCleanup();
+    }
 }
 
 document.querySelectorAll('.modal-backdrop').forEach(function (backdrop) {
     backdrop.addEventListener('click', function (e) {
         if (e.target === backdrop) {
-            backdrop.classList.remove('open');
+            closeModal(backdrop.id);
         }
     });
 });
 
 document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') {
-        document.querySelectorAll('.modal-backdrop.open').forEach(function (el) {
-            el.classList.remove('open');
-        });
+    if (e.key === 'Escape' && getOpenModals().length > 0) {
+        closeAllOpenModals(false);
+    }
+});
+
+window.addEventListener('popstate', function () {
+    if (ignoreNextPopState) {
+        ignoreNextPopState = false;
+        return;
+    }
+    if (hasModalHistoryGuard) {
+        hasModalHistoryGuard = false;
+        if (getOpenModals().length > 0) {
+            closeAllOpenModals(true);
+        }
     }
 });
 
