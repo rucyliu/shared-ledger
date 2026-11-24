@@ -15,7 +15,7 @@
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-  <link rel="stylesheet" href="./style.css?v=20261124" />
+  <link rel="stylesheet" href="./style.css?v=20261125" />
 </head>
 
 <body>
@@ -35,17 +35,13 @@
   </div>
 
   <div class="app-container">
-    <!-- 頂部帳本切換、刷新與建立/加入/說明列 -->
+    <!-- 頂部帳本切換與建立/加入/說明列 -->
     <div id="topControlBar" class="top-bar hidden">
       <div class="ledger-select-wrap">
         <select id="ledgerSelect" class="ledger-select" onchange="onSwitchLedger(this.value)">
           <option value="">尚無帳本</option>
         </select>
       </div>
-      <button id="btnManualRefresh" type="button" class="icon-btn icon-only" onclick="manualRefreshApp()"
-        title="重新同步最新帳務" aria-label="重新同步最新帳務">
-        <i class="fa-solid fa-arrows-rotate"></i>
-      </button>
       <button class="icon-btn primary-outline" onclick="openCreateLedgerModal()">
         <i class="fa-solid fa-plus"></i> 建立
       </button>
@@ -89,11 +85,17 @@
     <div id="mainDashboardView" class="hidden">
       <div class="hero-card">
         <div class="hero-header">
-          <div>
+          <div style="flex:1; min-width:0;">
             <h1 id="ledgerTitle" class="hero-title">-</h1>
             <div id="ledgerMeta" class="hero-meta">-</div>
           </div>
-          <span id="ledgerStatusBadge" class="status-badge status-active">進行中</span>
+          <div class="hero-header-right">
+            <span id="ledgerStatusBadge" class="status-badge status-active">進行中</span>
+            <button id="btnManualRefresh" type="button" class="hero-refresh-btn" onclick="manualRefreshApp()"
+              title="重新同步最新帳務" aria-label="重新同步最新帳務">
+              <i class="fa-solid fa-arrows-rotate"></i>
+            </button>
+          </div>
         </div>
 
         <div class="hero-stats">
@@ -1123,7 +1125,7 @@
     </div>
   </div>
 
-  <script src="./app.js?v=20261124"></script>
+  <script src="./app.js?v=20261125"></script>
 </body>
 
 </html>
