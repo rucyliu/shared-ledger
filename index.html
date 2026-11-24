@@ -1137,6 +1137,78 @@
     .personal-grid.has-subsidy {
       grid-template-columns: repeat(2, 1fr);
     }
+
+    /* 操作歷程篩選與時間軸卡片 */
+    .log-filter-bar {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      background: #f4ece9;
+      padding: 4px;
+      border-radius: 10px;
+      margin-bottom: 12px;
+    }
+
+    .log-filter-btn {
+      border: none;
+      background: transparent;
+      padding: 7px 6px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-sub);
+      cursor: pointer;
+    }
+
+    .log-filter-btn.active {
+      background: #fff;
+      color: var(--text-main);
+      box-shadow: 0 1px 4px rgba(61, 44, 39, 0.1);
+    }
+
+    .log-card {
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: #fff;
+      margin-bottom: 8px;
+    }
+
+    .log-card.type-add { border-left: 3.5px solid var(--green); }
+    .log-card.type-edit { border-left: 3.5px solid var(--accent-blue); background: #f9fbff; }
+    .log-card.type-del { border-left: 3.5px solid var(--red); background: #fff9f9; }
+
+    .log-card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      margin-bottom: 5px;
+    }
+
+    .log-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 1px 7px;
+      border-radius: 99px;
+    }
+
+    .log-badge.add { background: var(--green-bg); color: var(--green); }
+    .log-badge.edit { background: var(--bg-soft-blue); color: #2c66b8; }
+    .log-badge.del { background: var(--red-bg); color: var(--red); }
+
+    .log-source-pill {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 5px;
+      background: #e6f8ed;
+      color: #069c43;
+      margin-left: 5px;
+      vertical-align: middle;
+    }
   </style>
 </head>
 <body>
@@ -1263,9 +1335,14 @@
         <div class="card">
           <div class="section-title">
             <span>所有帳務項目 (<span id="expenseCount">0</span>)</span>
-            <span id="readOnlyHint" class="hidden" style="font-size:12px; color:var(--text-sub); font-weight:600;">
-              <i class="fa-solid fa-lock"></i> 已結算唯讀
-            </span>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span id="readOnlyHint" class="hidden" style="font-size:12px; color:var(--text-sub); font-weight:600;">
+                <i class="fa-solid fa-lock"></i> 已結算唯讀
+              </span>
+              <button type="button" class="icon-btn" style="padding:4px 9px; font-size:12px;" onclick="openActivityLogModal()">
+                <i class="fa-solid fa-clock-rotate-left"></i> 歷程
+              </button>
+            </div>
           </div>
           <div id="expenseListContainer"></div>
         </div>
@@ -2074,6 +2151,40 @@
       <div class="modal-actions">
         <button type="button" class="btn-secondary" style="flex:1;" onclick="backToRecurringManageFromDelete()">取消</button>
         <button type="button" class="btn-danger" style="flex:1;" onclick="executeDeleteRecurringTemplate()">確認刪除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 18. 帳務操作歷程 Modal -->
+  <div id="activityLogModal" class="modal-backdrop">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-clock-rotate-left" style="color:var(--primary);"></i> 帳務操作歷程</h3>
+        <button class="close-btn" onclick="closeModal('activityLogModal')"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="log-filter-bar">
+        <button type="button" id="logFilterAll" class="log-filter-btn active" onclick="switchActivityLogFilter('ALL')">
+          全部歷程
+        </button>
+        <button type="button" id="logFilterModify" class="log-filter-btn" onclick="switchActivityLogFilter('MODIFY_ONLY')">
+          僅看修改／刪除
+        </button>
+      </div>
+
+      <div id="activityLogCountHint" style="font-size:12px; color:var(--text-sub); margin-bottom:10px;"></div>
+      <div id="activityLogList"></div>
+
+      <div id="activityLogLoading" class="hidden" style="text-align:center; padding:16px 0; color:var(--text-sub); font-size:13px;">
+        <i class="fa-solid fa-spinner fa-spin"></i> 正在載入歷程紀錄...
+      </div>
+
+      <button id="btnLoadMoreLogs" type="button" class="btn-secondary hidden" style="width:100%; margin-top:4px;" onclick="loadMoreActivityLogs()">
+        <i class="fa-solid fa-angles-down"></i> 載入更早紀錄
+      </button>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-primary" onclick="closeModal('activityLogModal')">關閉</button>
       </div>
     </div>
   </div>
@@ -3732,6 +3843,158 @@
         userId: currentUser.userId,
         templateId: templateId
       }, '正在刪除定期支出範本...');
+    }
+
+    // =========================================================================
+    // 4.6 帳務操作歷程（按需分頁載入，每次 10 筆）
+    // =========================================================================
+    let activityLogState = {
+      filter: 'ALL',
+      offset: 0,
+      total: 0,
+      hasMore: false,
+      loading: false,
+      items: []
+    };
+
+    function openActivityLogModal() {
+      if (!appState || !appState.activeLedgerId) return;
+      activityLogState = {
+        filter: 'ALL',
+        offset: 0,
+        total: 0,
+        hasMore: false,
+        loading: false,
+        items: []
+      };
+      updateLogFilterButtons();
+      document.getElementById('activityLogList').innerHTML = '';
+      document.getElementById('activityLogCountHint').textContent = '';
+      document.getElementById('btnLoadMoreLogs').classList.add('hidden');
+      openModal('activityLogModal');
+      fetchActivityLogsPage(false);
+    }
+
+    function switchActivityLogFilter(filterMode) {
+      if (activityLogState.loading || activityLogState.filter === filterMode) return;
+      activityLogState.filter = filterMode;
+      activityLogState.offset = 0;
+      activityLogState.items = [];
+      activityLogState.hasMore = false;
+      updateLogFilterButtons();
+      document.getElementById('activityLogList').innerHTML = '';
+      document.getElementById('btnLoadMoreLogs').classList.add('hidden');
+      fetchActivityLogsPage(false);
+    }
+
+    function updateLogFilterButtons() {
+      document.getElementById('logFilterAll').classList.toggle('active', activityLogState.filter === 'ALL');
+      document.getElementById('logFilterModify').classList.toggle('active', activityLogState.filter === 'MODIFY_ONLY');
+    }
+
+    function loadMoreActivityLogs() {
+      if (activityLogState.loading || !activityLogState.hasMore) return;
+      fetchActivityLogsPage(true);
+    }
+
+    async function fetchActivityLogsPage(isAppend) {
+      activityLogState.loading = true;
+      const loadingEl = document.getElementById('activityLogLoading');
+      const loadMoreBtn = document.getElementById('btnLoadMoreLogs');
+      loadingEl.classList.remove('hidden');
+      loadMoreBtn.classList.add('hidden');
+
+      try {
+        const response = await fetch(GAS_API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            api_action: 'getActivityLogs',
+            userId: currentUser.userId,
+            ledgerId: appState.activeLedgerId,
+            filter: activityLogState.filter,
+            offset: activityLogState.offset,
+            limit: 10
+          })
+        });
+
+        if (!response.ok) throw new Error('伺服器連線異常 (HTTP ' + response.status + ')');
+        const json = await response.json();
+        if (!json.ok) throw new Error(json.error || '讀取歷程失敗');
+
+        const resData = json.data || {};
+        const newItems = resData.logs || [];
+        activityLogState.items = isAppend ? activityLogState.items.concat(newItems) : newItems;
+        activityLogState.offset = resData.nextOffset || activityLogState.items.length;
+        activityLogState.total = resData.total || 0;
+        activityLogState.hasMore = Boolean(resData.hasMore);
+
+        renderActivityLogList();
+      } catch (err) {
+        showToast(err.message || '載入歷程失敗');
+      } finally {
+        activityLogState.loading = false;
+        loadingEl.classList.add('hidden');
+      }
+    }
+
+    function renderActivityLogList() {
+      const container = document.getElementById('activityLogList');
+      const countHint = document.getElementById('activityLogCountHint');
+      const loadMoreBtn = document.getElementById('btnLoadMoreLogs');
+      const items = activityLogState.items;
+
+      if (items.length === 0) {
+        countHint.textContent = '';
+        container.innerHTML =
+          '<div style="text-align:center; padding:26px 12px; background:#faf6f5; border:1px dashed var(--border-color); border-radius:12px; color:var(--text-sub); font-size:13px;">' +
+          (activityLogState.filter === 'MODIFY_ONLY'
+            ? '目前尚無任何「修改」或「刪除」帳務的紀錄。'
+            : '目前尚無帳務操作歷程（新建立、修改或刪除的帳務皆會記錄於此）。') +
+          '</div>';
+        loadMoreBtn.classList.add('hidden');
+        return;
+      }
+
+      countHint.textContent = '目前顯示 ' + items.length + ' / 共 ' + activityLogState.total + ' 筆紀錄';
+      container.innerHTML = items.map(function (log) {
+        let cardCls = 'type-add';
+        let badgeCls = 'add';
+        let badgeLabel = '新增';
+        if (log.action_type === 'EXP_EDIT') {
+          cardCls = 'type-edit';
+          badgeCls = 'edit';
+          badgeLabel = '編輯';
+        } else if (log.action_type === 'EXP_DEL') {
+          cardCls = 'type-del';
+          badgeCls = 'del';
+          badgeLabel = '刪除';
+        }
+
+        const sourceBadge = log.source === 'LINE'
+          ? '<span class="log-source-pill"><i class="fa-brands fa-line"></i> LINE 快記</span>'
+          : '';
+
+        return '<div class="log-card ' + cardCls + '">' +
+          '<div class="log-card-top">' +
+          '<div><span class="log-badge ' + badgeCls + '">' + badgeLabel + '</span>' + sourceBadge + '</div>' +
+          '<span style="font-size:11px; color:var(--text-sub);">' + escapeHtml(log.created_at) + '</span>' +
+          '</div>' +
+          '<div style="font-size:13.5px; font-weight:800; color:var(--text-main); margin-bottom:3px;">' +
+          escapeHtml(log.operator_name) + ' <span style="font-weight:400; color:var(--text-sub);">操作</span>「' + escapeHtml(log.target_name) + '」' +
+          '</div>' +
+          '<div style="font-size:12px; color:var(--text-sub); line-height:1.5;">' +
+          escapeHtml(log.detail_summary) +
+          '</div></div>';
+      }).join('');
+
+      if (activityLogState.hasMore) {
+        const remain = activityLogState.total - items.length;
+        loadMoreBtn.innerHTML = '<i class="fa-solid fa-angles-down"></i> 載入更早紀錄（還有 ' + remain + ' 筆）';
+        loadMoreBtn.classList.remove('hidden');
+      } else {
+        loadMoreBtn.classList.add('hidden');
+      }
     }
 
     function confirmDeleteCurrentExpense() {
