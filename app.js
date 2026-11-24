@@ -49,6 +49,28 @@ function getLiffIdTokenSafe() {
     }
 }
 
+function getLiffAccessTokenSafe() {
+    if (isMockMode || typeof liff === 'undefined' || !liff.getAccessToken) return '';
+    try {
+        return liff.getAccessToken() || '';
+    } catch (e) {
+        return '';
+    }
+}
+
+function forceExternalRelogin() {
+    if (isMockMode || typeof liff === 'undefined') return false;
+    const lastRetry = Number(sessionStorage.getItem('liff_relogin_at') || 0);
+    if (Date.now() - lastRetry < 30000) return false;
+    sessionStorage.setItem('liff_relogin_at', String(Date.now()));
+
+    if (!isRunningInLineClient() && liff.isLoggedIn && liff.isLoggedIn()) {
+        liff.logout();
+    }
+    liff.login();
+    return true;
+}
+
 function updateCsvExportButtonUi() {
     const btn = document.getElementById('btnExportCsv');
     if (!btn) return;
@@ -203,7 +225,13 @@ function extractPrefillFromUrl() {
             return;
         }
 
-        const profile = await liff.getProfile();
+        let profile;
+        try {
+            profile = await liff.getProfile();
+        } catch (profileErr) {
+            if (forceExternalRelogin()) return;
+            throw profileErr;
+        }
         currentUser = {
             userId: profile.userId,
             displayName: profile.displayName
@@ -323,7 +351,8 @@ async function callGasApi(action, payloadObj, loadingMsg, options) {
     try {
         const bodyObj = Object.assign({
             api_action: action,
-            idToken: getLiffIdTokenSafe()
+            idToken: getLiffIdTokenSafe(),
+            accessToken: getLiffAccessTokenSafe()
         }, payloadObj);
 
         const response = await fetch(GAS_API_URL, {
@@ -343,7 +372,11 @@ async function callGasApi(action, payloadObj, loadingMsg, options) {
             if (json.error === 'AUTH_EXPIRED' && !isMockMode && typeof liff !== 'undefined') {
                 if (!isSilent) hideLoading();
                 showToast('LINE 登入憑證已過期，正在重新驗證...', 3000);
-                setTimeout(function () { liff.login(); }, 800);
+                setTimeout(function () {
+                    if (!forceExternalRelogin()) {
+                        showToast('登入狀態異常，請清除瀏覽器網站資料後重開', 4500);
+                    }
+                }, 600);
                 return;
             }
             throw new Error(json.error || '操作失敗');
@@ -2032,6 +2065,7 @@ async function fetchActivityLogsPage(isAppend) {
             body: JSON.stringify({
                 api_action: 'getActivityLogs',
                 idToken: getLiffIdTokenSafe(),
+                accessToken: getLiffAccessTokenSafe(),
                 userId: currentUser.userId,
                 ledgerId: appState.activeLedgerId,
                 filter: activityLogState.filter,
@@ -2045,7 +2079,11 @@ async function fetchActivityLogsPage(isAppend) {
         if (!json.ok) {
             if (json.error === 'AUTH_EXPIRED' && !isMockMode && typeof liff !== 'undefined') {
                 showToast('LINE 登入憑證已過期，正在重新驗證...', 3000);
-                setTimeout(function () { liff.login(); }, 800);
+                setTimeout(function () {
+                    if (!forceExternalRelogin()) {
+                        showToast('登入狀態異常，請清除瀏覽器網站資料後重開', 4500);
+                    }
+                }, 600);
                 return;
             }
             throw new Error(json.error || '讀取歷程失敗');
