@@ -22,6 +22,9 @@ let lastRenderedStateJson = '';
 let lastSyncAt = 0;
 let activeSilentSyncCount = 0;
 
+// 外部瀏覽器自動重登防循環鎖（跨導向保留，2 分鐘內最多觸發 1 次）
+const RELOGIN_GUARD_KEY = 'liff_relogin_guard_at';
+
 // 編輯帳務二段式防誤刪狀態
 let deleteExpenseArmed = false;
 let deleteExpenseArmTimer = null;
@@ -58,11 +61,22 @@ function getLiffAccessTokenSafe() {
     }
 }
 
+function clearReloginGuard() {
+    try {
+        localStorage.removeItem(RELOGIN_GUARD_KEY);
+    } catch (e) { }
+}
+
 function forceExternalRelogin() {
     if (isMockMode || typeof liff === 'undefined') return false;
-    const lastRetry = Number(sessionStorage.getItem('liff_relogin_at') || 0);
-    if (Date.now() - lastRetry < 30000) return false;
-    sessionStorage.setItem('liff_relogin_at', String(Date.now()));
+    try {
+        const lastRetry = Number(localStorage.getItem(RELOGIN_GUARD_KEY) || 0);
+        // 2 分鐘內最多只自動重登 1 次，徹底杜絕無限循環登出
+        if (Date.now() - lastRetry < 120000) return false;
+        localStorage.setItem(RELOGIN_GUARD_KEY, String(Date.now()));
+    } catch (e) {
+        return false;
+    }
 
     if (!isRunningInLineClient() && liff.isLoggedIn && liff.isLoggedIn()) {
         liff.logout();
@@ -232,6 +246,7 @@ function extractPrefillFromUrl() {
             if (forceExternalRelogin()) return;
             throw profileErr;
         }
+
         currentUser = {
             userId: profile.userId,
             displayName: profile.displayName
@@ -331,7 +346,7 @@ document.addEventListener('visibilitychange', function () {
 });
 
 // =========================================================================
-// 2. 透過 fetch 呼叫 GAS 純 JSON API（附帶 ID Token、靜默同步與快取防覆蓋）
+// 2. 透過 fetch 呼叫 GAS 純 JSON API（附帶雙憑證、靜默同步與快取防覆蓋）
 // =========================================================================
 async function callGasApi(action, payloadObj, loadingMsg, options) {
     const isSilent = Boolean(options && options.silent);
@@ -374,7 +389,7 @@ async function callGasApi(action, payloadObj, loadingMsg, options) {
                 showToast('LINE 登入憑證已過期，正在重新驗證...', 3000);
                 setTimeout(function () {
                     if (!forceExternalRelogin()) {
-                        showToast('登入狀態異常，請清除瀏覽器網站資料後重開', 4500);
+                        showToast('登入憑證仍無效，請稍後再試或清除瀏覽器網站資料後重開', 4500);
                     }
                 }, 600);
                 return;
@@ -388,6 +403,8 @@ async function callGasApi(action, payloadObj, loadingMsg, options) {
         }
 
         lastSyncAt = Date.now();
+        clearReloginGuard();
+
         const nextState = json.data;
         const nextComparableJson = buildComparableStateJson(nextState);
 
@@ -419,7 +436,9 @@ async function callGasApi(action, payloadObj, loadingMsg, options) {
     } catch (err) {
         if (isSilent) {
             if (reqSeq === apiRequestSeq) {
-                showToast(isManualRefresh ? (err.message || '同步失敗，請稍後再試') : '背景同步失敗，目前顯示為上次快取資料', 3500);
+                const errMsg = String(err.message || '');
+                const showExactError = isManualRefresh || errMsg.indexOf('設定不符') !== -1;
+                showToast(showExactError ? (errMsg || '同步失敗，請稍後再試') : '背景同步失敗，目前顯示為上次快取資料', 4000);
             }
         } else {
             hideLoading();
@@ -2000,7 +2019,7 @@ function executeDeleteRecurringTemplate() {
 }
 
 // =========================================================================
-// 4.6 帳務操作歷程（按需分頁載入，每次 10 筆，附帶 ID Token）
+// 4.6 帳務操作歷程（按需分頁載入，每次 10 筆，附帶雙憑證）
 // =========================================================================
 let activityLogState = {
     filter: 'ALL',
@@ -2081,13 +2100,15 @@ async function fetchActivityLogsPage(isAppend) {
                 showToast('LINE 登入憑證已過期，正在重新驗證...', 3000);
                 setTimeout(function () {
                     if (!forceExternalRelogin()) {
-                        showToast('登入狀態異常，請清除瀏覽器網站資料後重開', 4500);
+                        showToast('登入憑證仍無效，請稍後再試或清除瀏覽器網站資料後重開', 4500);
                     }
                 }, 600);
                 return;
             }
             throw new Error(json.error || '讀取歷程失敗');
         }
+
+        clearReloginGuard();
 
         const resData = json.data || {};
         const newItems = resData.logs || [];
