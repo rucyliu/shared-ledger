@@ -15,7 +15,7 @@
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-  <link rel="stylesheet" href="./style.css" />
+  <link rel="stylesheet" href="./style.css?v=20261124" />
 </head>
 
 <body>
@@ -35,13 +35,17 @@
   </div>
 
   <div class="app-container">
-    <!-- 頂部帳本切換與建立/加入/說明列 -->
+    <!-- 頂部帳本切換、刷新與建立/加入/說明列 -->
     <div id="topControlBar" class="top-bar hidden">
       <div class="ledger-select-wrap">
         <select id="ledgerSelect" class="ledger-select" onchange="onSwitchLedger(this.value)">
           <option value="">尚無帳本</option>
         </select>
       </div>
+      <button id="btnManualRefresh" type="button" class="icon-btn icon-only" onclick="manualRefreshApp()"
+        title="重新同步最新帳務" aria-label="重新同步最新帳務">
+        <i class="fa-solid fa-arrows-rotate"></i>
+      </button>
       <button class="icon-btn primary-outline" onclick="openCreateLedgerModal()">
         <i class="fa-solid fa-plus"></i> 建立
       </button>
@@ -158,6 +162,19 @@
               </button>
             </div>
           </div>
+
+          <!-- 即時搜尋與墊付／提供人篩選列 -->
+          <div id="expenseFilterBar" class="expense-filter-bar hidden">
+            <div class="expense-search-wrap">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" id="expenseSearchInput" class="expense-search-input"
+                placeholder="搜尋項目或成員..." oninput="onExpenseFilterChange()" />
+            </div>
+            <select id="expensePayerFilter" class="expense-filter-select" onchange="onExpenseFilterChange()">
+              <option value="ALL">全部對象</option>
+            </select>
+          </div>
+
           <div id="expenseListContainer"></div>
         </div>
       </div>
@@ -231,7 +248,7 @@
                 onclick="copyTextSettlementReport()">
                 <i class="fa-regular fa-copy"></i> 複製文字
               </button>
-              <button type="button" class="icon-btn"
+              <button id="btnExportCsv" type="button" class="icon-btn"
                 style="padding:4px 9px; font-size:12px; border-color:#b7dfc9; background:var(--green-bg); color:var(--green);"
                 onclick="exportLedgerCsv()">
                 <i class="fa-solid fa-file-csv"></i> 匯出 CSV
@@ -239,6 +256,9 @@
             </div>
           </div>
           <div id="allTransferList"></div>
+          <div class="settlement-rounding-note">
+            <i class="fa-solid fa-circle-info"></i> 金額採四捨五入取整數計算，當有除不盡的分攤項目時，淨額加總偶有 ±1 元尾差屬正常現象。
+          </div>
         </div>
 
         <div class="card">
@@ -265,9 +285,9 @@
             <span><i class="fa-solid fa-lock"></i> 帳本管理者結算管理</span>
           </div>
           <p style="font-size:12px; color:var(--text-sub); margin:0 0 12px 0; line-height:1.5;">
-            確認所有成員皆已填寫完畢後，可執行正式結算。<b>結算後帳本將永久鎖定不可再編輯</b>，並自動透過 LINE 通知全體成員最終轉帳金額。
+            確認所有成員皆已填寫完畢後，可執行正式結算。<b>結算後帳本將永久鎖定不可再編輯</b>，並可選擇是否透過 LINE 推播通知全體成員。
           </p>
-          <button class="btn-danger" onclick="openModal('confirmSettleModal')">
+          <button class="btn-danger" onclick="openConfirmSettleModal()">
             <i class="fa-solid fa-check-double"></i> 正式結算並鎖定帳本
           </button>
         </div>
@@ -312,11 +332,12 @@
 
   <!-- ====================================================================== -->
   <!-- Modals 彈窗區                                                           -->
+  <!-- 長內容彈窗採 .sheet-fixed（固定標題與底部按鈕，僅中間 .modal-body 捲動） -->
   <!-- ====================================================================== -->
 
-  <!-- 1. 新增 / 編輯帳務 Modal -->
+  <!-- 1. 新增 / 編輯帳務 Modal（固定底部操作列） -->
   <div id="expenseModal" class="modal-backdrop">
-    <div class="modal-sheet">
+    <div class="modal-sheet sheet-fixed">
       <div class="modal-header">
         <h3 id="expenseModalTitle">新增帳務項目</h3>
         <button class="close-btn" onclick="closeModal('expenseModal')"><i class="fa-solid fa-xmark"></i></button>
@@ -324,82 +345,85 @@
       <input type="hidden" id="editExpenseId" />
       <input type="hidden" id="expRecordType" value="EXPENSE" />
 
-      <!-- 帳務類型切換：一般支出 vs 贊助／補助款 -->
-      <div class="record-type-switch">
-        <button type="button" id="btnTypeExpense" class="record-type-btn active-expense"
-          onclick="setExpenseRecordType('EXPENSE')">
-          <i class="fa-solid fa-receipt"></i> 一般支出
-        </button>
-        <button type="button" id="btnTypeSubsidy" class="record-type-btn" onclick="setExpenseRecordType('SUBSIDY')">
-          <i class="fa-solid fa-gift"></i> 贊助／補助款
-        </button>
-      </div>
-
-      <!-- 快速帶入個人定期支出項目列（切換為贊助／補助款時自動隱藏） -->
-      <div id="quickRecurringSection" class="recurring-quick-box">
-        <div class="recurring-quick-header">
-          <span><i class="fa-solid fa-bolt" style="color:#d97706;"></i> 快速帶入我的定期支出</span>
-          <button type="button" class="icon-btn" style="padding:2px 8px; font-size:11px;"
-            onclick="openRecurringManageModal(true)">
-            <i class="fa-solid fa-gear"></i> 管理範本
+      <div class="modal-body">
+        <!-- 帳務類型切換：一般支出 vs 贊助／補助款 -->
+        <div class="record-type-switch">
+          <button type="button" id="btnTypeExpense" class="record-type-btn active-expense"
+            onclick="setExpenseRecordType('EXPENSE')">
+            <i class="fa-solid fa-receipt"></i> 一般支出
+          </button>
+          <button type="button" id="btnTypeSubsidy" class="record-type-btn" onclick="setExpenseRecordType('SUBSIDY')">
+            <i class="fa-solid fa-gift"></i> 贊助／補助款
           </button>
         </div>
-        <div id="quickRecurringChips" class="recurring-chips-scroll"></div>
-      </div>
 
-      <div class="form-group">
-        <label class="form-label">項目名稱</label>
-        <input type="text" id="expItemName" class="form-control" placeholder="例如：第一天晚餐、租車費、門票" maxlength="40" />
-      </div>
+        <!-- 快速帶入個人定期支出項目列（切換為贊助／補助款時自動隱藏） -->
+        <div id="quickRecurringSection" class="recurring-quick-box">
+          <div class="recurring-quick-header">
+            <span><i class="fa-solid fa-bolt" style="color:#d97706;"></i> 快速帶入我的定期支出</span>
+            <button type="button" class="icon-btn" style="padding:2px 8px; font-size:11px;"
+              onclick="openRecurringManageModal(true)">
+              <i class="fa-solid fa-gear"></i> 管理範本
+            </button>
+          </div>
+          <div id="quickRecurringChips" class="recurring-chips-scroll"></div>
+        </div>
 
-      <div class="form-group">
-        <label id="expAmountLabel" class="form-label">支付金額</label>
-        <input type="number" id="expAmount" class="form-control" inputmode="decimal" placeholder="請輸入金額" min="1"
-          step="any" oninput="updateSplitPreview()" />
-      </div>
+        <div class="form-group">
+          <label class="form-label">項目名稱</label>
+          <input type="text" id="expItemName" class="form-control" placeholder="例如：第一天晚餐、租車費、門票" maxlength="40" />
+        </div>
 
-      <div class="form-group">
-        <label id="expPayerLabel" class="form-label">誰預先支付（墊付人）</label>
-        <select id="expPayerSelect" class="form-control"></select>
-        <div id="expPayerHint" class="hidden" style="font-size:11.5px; color:var(--text-sub); margin-top:5px;">
-          結算時由這位成員負責分出此筆贊助／補助款。
+        <div class="form-group">
+          <label id="expAmountLabel" class="form-label">支付金額</label>
+          <input type="number" id="expAmount" class="form-control" inputmode="decimal" placeholder="請輸入金額" min="1"
+            step="any" oninput="updateSplitPreview()" />
+        </div>
+
+        <div class="form-group">
+          <label id="expPayerLabel" class="form-label">誰預先支付（墊付人）</label>
+          <select id="expPayerSelect" class="form-control"></select>
+          <div id="expPayerHint" class="hidden" style="font-size:11.5px; color:var(--text-sub); margin-top:5px;">
+            結算時由這位成員負責分出此筆贊助／補助款。
+          </div>
+        </div>
+
+        <div class="form-group">
+          <div class="form-label">
+            <span id="expSplitLabel">哪些人均攤應付</span>
+            <button type="button" class="icon-btn" style="padding:3px 8px; font-size:12px;"
+              onclick="toggleSelectAllSplit()">
+              全選 / 取消全選
+            </button>
+          </div>
+          <div id="splitMembersGrid" class="split-grid"></div>
+          <div id="splitPreviewBox" class="split-preview">請勾選均攤成員</div>
+          <div id="expSubsidySplitHint" class="subsidy-hint-box hidden">
+            <i class="fa-solid fa-circle-info"></i> 若提供／領款人也在受惠名單內，代表與大家平分折抵；取消勾選本人則代表全額贊助其他成員。
+          </div>
+        </div>
+
+        <!-- 順手存為個人定期支出範本（切換為贊助／補助款時自動隱藏） -->
+        <div id="saveAsRecurringSection"
+          style="background:#faf6f5; border:1px solid var(--border-color); border-radius:12px; padding:10px 12px;">
+          <label
+            style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color:var(--text-main); cursor:pointer; margin:0;">
+            <input type="checkbox" id="saveAsRecurringCheckbox"
+              style="accent-color:var(--primary); width:16px; height:16px; margin:0;"
+              onchange="onToggleSaveAsRecurring()" />
+            <span><i class="fa-solid fa-repeat" style="color:var(--primary);"></i> 同時儲存為我的定期支出範本</span>
+          </label>
+          <div id="recurringBillingDayWrap" class="hidden"
+            style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--border-color); display:flex; align-items:center; justify-content:space-between; gap:8px;">
+            <span style="font-size:12px; color:var(--text-sub);">每月扣款日（選填，1～31）：</span>
+            <input type="number" id="saveAsRecurringDay" class="form-control"
+              style="width:96px; padding:6px 8px; font-size:13px;" min="1" max="31" placeholder="例如 5" />
+          </div>
         </div>
       </div>
 
-      <div class="form-group">
-        <div class="form-label">
-          <span id="expSplitLabel">哪些人均攤應付</span>
-          <button type="button" class="icon-btn" style="padding:3px 8px; font-size:12px;"
-            onclick="toggleSelectAllSplit()">
-            全選 / 取消全選
-          </button>
-        </div>
-        <div id="splitMembersGrid" class="split-grid"></div>
-        <div id="splitPreviewBox" class="split-preview">請勾選均攤成員</div>
-        <div id="expSubsidySplitHint" class="subsidy-hint-box hidden">
-          <i class="fa-solid fa-circle-info"></i> 若提供／領款人也在受惠名單內，代表與大家平分折抵；取消勾選本人則代表全額贊助其他成員。
-        </div>
-      </div>
-
-      <!-- 順手存為個人定期支出範本（切換為贊助／補助款時自動隱藏） -->
-      <div id="saveAsRecurringSection"
-        style="background:#faf6f5; border:1px solid var(--border-color); border-radius:12px; padding:10px 12px; margin-bottom:12px;">
-        <label
-          style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color:var(--text-main); cursor:pointer; margin:0;">
-          <input type="checkbox" id="saveAsRecurringCheckbox"
-            style="accent-color:var(--primary); width:16px; height:16px; margin:0;"
-            onchange="onToggleSaveAsRecurring()" />
-          <span><i class="fa-solid fa-repeat" style="color:var(--primary);"></i> 同時儲存為我的定期支出範本</span>
-        </label>
-        <div id="recurringBillingDayWrap" class="hidden"
-          style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--border-color); display:flex; align-items:center; justify-content:space-between; gap:8px;">
-          <span style="font-size:12px; color:var(--text-sub);">每月扣款日（選填，1～31）：</span>
-          <input type="number" id="saveAsRecurringDay" class="form-control"
-            style="width:96px; padding:6px 8px; font-size:13px;" min="1" max="31" placeholder="例如 5" />
-        </div>
-      </div>
-
-      <div class="modal-actions">
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" onclick="closeModal('expenseModal')">取消</button>
         <button id="btnDeleteExpense" type="button" class="btn-secondary text-red hidden"
           onclick="confirmDeleteCurrentExpense()">
           <i class="fa-solid fa-trash"></i> 刪除
@@ -411,7 +435,7 @@
     </div>
   </div>
 
-  <!-- 2. 建立新帳本 Modal（支援沿用目前預設帳本成員） -->
+  <!-- 2. 建立新帳本 Modal（短彈窗） -->
   <div id="createLedgerModal" class="modal-backdrop">
     <div class="modal-sheet">
       <div class="modal-header">
@@ -448,7 +472,7 @@
     </div>
   </div>
 
-  <!-- 3. 輸入邀請碼加入帳本 Modal -->
+  <!-- 3. 輸入邀請碼加入帳本 Modal（短彈窗） -->
   <div id="joinLedgerModal" class="modal-backdrop">
     <div class="modal-sheet">
       <div class="modal-header">
@@ -468,7 +492,7 @@
     </div>
   </div>
 
-  <!-- 4. 分享邀請連結 Modal -->
+  <!-- 4. 分享邀請連結 Modal（短彈窗） -->
   <div id="shareInviteModal" class="modal-backdrop">
     <div class="modal-sheet">
       <div class="modal-header">
@@ -496,7 +520,7 @@
     </div>
   </div>
 
-  <!-- 5. 確認結算鎖定 Modal -->
+  <!-- 5. 確認結算鎖定 Modal（含 LINE 推播開關） -->
   <div id="confirmSettleModal" class="modal-backdrop">
     <div class="modal-sheet">
       <div class="modal-header">
@@ -504,8 +528,17 @@
         <button class="close-btn" onclick="closeModal('confirmSettleModal')"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <p style="font-size:14px; line-height:1.6; color:var(--text-main); margin-top:0;">
-        結算後此帳本將立即鎖定為<b>唯讀狀態</b>，所有成員都無法再新增、修改或刪除任何帳務項目，且系統會自動推播結算金額給大家。
+        結算後此帳本將立即鎖定為<b>唯讀狀態</b>，所有成員都無法再新增、修改或刪除任何帳務項目。
       </p>
+      <div class="settle-notify-box">
+        <label class="settle-notify-label">
+          <input type="checkbox" id="settleNotifyCheckbox" checked />
+          <span><i class="fa-brands fa-line" style="color:#06c755;"></i> 同時 LINE 推播通知所有成員</span>
+        </label>
+        <div class="settle-notify-hint">
+          若官方帳號本月推播額度吃緊，可取消勾選改為靜默鎖定，完成後再用「複製文字」貼回群組。
+        </div>
+      </div>
       <div class="modal-actions">
         <button type="button" class="btn-secondary" style="flex:1;"
           onclick="closeModal('confirmSettleModal')">取消</button>
@@ -603,37 +636,45 @@
     </div>
   </div>
 
-  <!-- 10. 受邀加入選擇 Modal（第一段） -->
+  <!-- 10. 受邀加入選擇 Modal（第一段，固定底部關閉列） -->
   <div id="claimGuestStep1Modal" class="modal-backdrop">
-    <div class="modal-sheet">
+    <div class="modal-sheet sheet-fixed">
       <div class="modal-header">
         <h3>加入帳本「<span id="claimLedgerTitle"></span>」</h3>
         <button class="close-btn" onclick="closeModal('claimGuestStep1Modal')"><i
             class="fa-solid fa-xmark"></i></button>
       </div>
-      <div
-        style="background:#faf6f5; border:1px solid var(--border-color); border-radius:12px; padding:12px; font-size:13px; color:var(--text-sub); line-height:1.55; margin-bottom:14px;">
-        帳本管理者已預先建立以下「未綁定 LINE」的代管名單。<br>
-        • 若名單中有你的名字，請點擊對應項目進行<b>認領合併</b>，原本幫你代記的帳務會自動轉入你的帳號。<br>
-        • 若名單中<b>沒有你</b>，或你不確定，請直接點選下方「我是新成員」。
-      </div>
 
-      <button type="button" class="claim-option-btn new-member" onclick="confirmJoinAsNewMember()">
-        <div>
-          <div style="font-weight:800; font-size:15px; color:#2c66b8;">
-            <i class="fa-solid fa-user-check"></i> 我是新成員，直接加入
-          </div>
-          <div style="font-size:12px; color:var(--text-sub); margin-top:2px;">
-            以你的 LINE 暱稱建立獨立成員身分（最安全）
-          </div>
+      <div class="modal-body">
+        <div
+          style="background:#faf6f5; border:1px solid var(--border-color); border-radius:12px; padding:12px; font-size:13px; color:var(--text-sub); line-height:1.55; margin-bottom:14px;">
+          帳本管理者已預先建立以下「未綁定 LINE」的代管名單。<br>
+          • 若名單中有你的名字，請點擊對應項目進行<b>認領合併</b>，原本幫你代記的帳務會自動轉入你的帳號。<br>
+          • 若名單中<b>沒有你</b>，或你不確定，請直接點選下方「我是新成員」。
         </div>
-        <i class="fa-solid fa-chevron-right" style="color:#2c66b8;"></i>
-      </button>
 
-      <div style="font-size:12px; font-weight:700; color:var(--text-sub); margin:12px 0 6px 0;">
-        或是認領現有的代管成員：
+        <button type="button" class="claim-option-btn new-member" onclick="confirmJoinAsNewMember()">
+          <div>
+            <div style="font-weight:800; font-size:15px; color:#2c66b8;">
+              <i class="fa-solid fa-user-check"></i> 我是新成員，直接加入
+            </div>
+            <div style="font-size:12px; color:var(--text-sub); margin-top:2px;">
+              以你的 LINE 暱稱建立獨立成員身分（最安全）
+            </div>
+          </div>
+          <i class="fa-solid fa-chevron-right" style="color:#2c66b8;"></i>
+        </button>
+
+        <div style="font-size:12px; font-weight:700; color:var(--text-sub); margin:12px 0 6px 0;">
+          或是認領現有的代管成員：
+        </div>
+        <div id="claimGuestListContainer"></div>
       </div>
-      <div id="claimGuestListContainer"></div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" style="width:100%;"
+          onclick="closeModal('claimGuestStep1Modal')">取消</button>
+      </div>
     </div>
   </div>
 
@@ -725,284 +766,293 @@
     </div>
   </div>
 
-  <!-- 14. 操作手冊與常見問題 (FAQ) Modal -->
+  <!-- 14. 操作手冊與常見問題 (FAQ) Modal（固定搜尋列與底部關閉列） -->
   <div id="faqModal" class="modal-backdrop">
-    <div class="modal-sheet">
+    <div class="modal-sheet sheet-fixed">
       <div class="modal-header">
         <h3><i class="fa-regular fa-circle-question" style="color:var(--primary);"></i> 操作手冊與常見問題</h3>
         <button class="close-btn" onclick="closeModal('faqModal')"><i class="fa-solid fa-xmark"></i></button>
       </div>
 
-      <div class="faq-search-wrap">
-        <i class="fa-solid fa-magnifying-glass"></i>
-        <input type="text" id="faqSearchInput" class="faq-search-input" placeholder="搜尋關鍵字（例如：贊助、補助、定期、代管、編號、管理者）"
-          oninput="filterFaqItems()" />
-      </div>
-
-      <div id="faqEmptyNotice" class="hidden"
-        style="text-align:center; padding:24px 0; color:var(--text-sub); font-size:13px;">
-        找不到符合的說明項目，請嘗試其他關鍵字。
-      </div>
-
-      <div id="faqListContainer">
-        <!-- 分類一 -->
-        <div class="faq-category-group">
-          <div class="faq-cat-title"><i class="fa-solid fa-compass"></i> 一、入門與帳號設定</div>
-
-          <details class="faq-item">
-            <summary class="faq-q">
-              <span>1. 如何建立新帳本或邀請朋友加入？</span>
-              <i class="fa-solid fa-chevron-down faq-chevron"></i>
-            </summary>
-            <div class="faq-a">
-              點擊頂部 <b>「建立」</b> 輸入帳本名稱即可開帳並成為該帳本的 <b>帳本管理者</b>。帳本進行中時，所有成員都可以在主卡片下方看到 <b>6 碼邀請碼</b>，點擊 <b>「邀請朋友」</b>
-              即可複製專屬連結或透過 LINE 好友選單傳送；朋友點擊連結或輸入邀請碼即可加入。
-            </div>
-          </details>
-
-          <details class="faq-item">
-            <summary class="faq-q">
-              <span>2. 受邀加入時跳出「認領代管成員」該怎麼選？</span>
-              <i class="fa-solid fa-chevron-down faq-chevron"></i>
-            </summary>
-            <div class="faq-a">
-              若帳本管理者先前已幫你建立「未綁定 LINE」的代管名單，受邀加入時系統會先詢問身分：<br>
-              • <b>名單中有你</b>：點擊對應名字並二次確認後，原本幫你代記的墊付與均攤紀錄會自動合併至你的 LINE 帳號（合併後無法還原）。<br>
-              • <b>名單中沒有你或不確定</b>：請直接點選 <b>「我是新成員，直接加入」</b>。
-            </div>
-          </details>
-
-          <details class="faq-item">
-            <summary class="faq-q">
-              <span>3. 為什麼建議加入記帳本官方帳號好友？</span>
-              <i class="fa-solid fa-chevron-down faq-chevron"></i>
-            </summary>
-            <div class="faq-a">
-              未加好友仍可正常開啟網頁記帳；但加入官方帳號好友後，才能在<b>正式結算</b>、<b>被加入新帳本</b>或<b>接任帳本管理者</b>時收到 LINE 推播通知，也能直接在 LINE
-              聊天室輸入文字快速記帳、帶入定期支出與查詢個人明細。
-            </div>
-          </details>
-        </div>
-
-        <!-- 分類二 -->
-        <div class="faq-category-group">
-          <div class="faq-cat-title"><i class="fa-solid fa-pen-to-square"></i> 二、日常記帳、贊助／補助款與定期支出</div>
-
-          <details class="faq-item">
-            <summary class="faq-q">
-              <span>4. 朋友沒用 LINE 或不想自己操作記帳怎麼辦？</span>
-              <i class="fa-solid fa-chevron-down faq-chevron"></i>
-            </summary>
-            <div class="faq-a">
-              帳本管理者可點擊主卡片下方的 <b>「代管成員」</b>，輸入暱稱（例如：阿公、不記帳的小美）建立 <span class="guest-badge"
-                style="margin-left:0;">未綁定</span> 成員。代管成員一樣可作為墊付人、補助提供人或均攤／受惠對象參與結算，日後對方若加入帳本也能隨時認領合併。
-            </div>
-          </details>
-
-          <details class="faq-item">
-            <summary class="faq-q">
-              <span>5. 記錯金額或分攤名單可以修改嗎？</span>
-              <i class="fa-solid fa-chevron-down faq-chevron"></i>
-            </summary>
-            <div class="faq-a">
-              只要帳本狀態為 <b>「進行中」</b>，所有成員皆可至 <b>「帳務明細」</b> 分頁點擊項目右側的 <b>「編輯」</b>
-              修改類型、名稱、金額、墊付／提供人或分攤名單，也可刪除該筆項目。一旦帳本管理者執行「正式結算」後，帳本即鎖定為唯讀。
-            </div>
-          </details>
-
-          <details class="faq-item">
-            <summary class="faq-q">
-              <span>6. 如何修改成員在帳本內的顯示暱稱？</span>
-              <i class="fa-solid fa-chevron-down faq-chevron"></i>
-            </summary>
-            <div class="faq-a">
-              點擊主卡片上「我的暱稱」旁的 <b>「改名」</b>，即可設定專屬於目前帳本的顯示名稱；<b>帳本管理者</b>則可在 <b>「結算總覽」</b>
-              的成員統計表中，點擊任一位成員（包含代管成員）旁的鉛筆圖示協助修改暱稱。
-            </div>
-          </details>
-
-          <details class="faq-item">
-            <summary class="faq-q">
-              <span>7. 什麼時候使用「贊助／補助款」？金額怎麼計算？</span>
-              <i class="fa-solid fa-chevron-down faq-chevron"></i>
-            </summary>
-            <div class="faq-a">
-              適合「有人領取補助款或自掏腰包贊助大家花費」（如旅遊補助、長輩贊助金、刷卡回饋）的情境。點擊「新增帳務項目」後，將頂部類型切換為 <b>「🎁 贊助／補助款」</b> 即可輸入：<br>
-              • <b>情境 1（平分外部補助）</b>：A 領取 $3,000 旅遊補助，受惠成員勾選 <b>A、B、C</b> 三人 ➔ 每人各折抵 $1,000；A 負責拿出 $3,000 扣掉自己折抵的
-              $1,000，補助淨額為 <span class="faq-code">-$2,000</span>，B 與 C 各為 <span class="faq-code">+$1,000</span>。<br>
-              • <b>情境 2（個人純贊助他人）</b>：A 自掏腰包贊助 $3,000，受惠成員<b>取消勾選 A</b>、只勾 <b>B、C</b> ➔ A 補助淨額為 <span
-                class="faq-code">-$3,000</span>，B 與 C 各折抵 <span class="faq-code">+$1,500</span>。<br>
-              • 帳本含贊助／補助款時，「結算總覽」會自動展開 <b>「贊助／補助」</b> 欄位，讓 <span class="faq-code">已預付 - 應均攤 + 贊助／補助 = 淨額</span> 清楚透明。
-            </div>
-          </details>
-
-          <details class="faq-item">
-            <summary class="faq-q">
-              <span>8. 如何使用「個人定期支出」提醒每月固定開銷？</span>
-              <i class="fa-solid fa-chevron-down faq-chevron"></i>
-            </summary>
-            <div class="faq-a">
-              定期支出範本綁定你的個人 LINE 帳號，<b>跨所有帳本皆可共用</b>（適合每月固定訂閱費、會員費）：<br>
-              • <b>建立與管理</b>：可從 <b>「我的明細 ➔ 定期支出設定」</b> 新增，或在新增一般支出時勾選 <b>「同時儲存為我的定期支出範本」</b>。金額可填 <span
-                class="faq-code">0</span> 代表浮動帳單（如水電費），也可設定每月扣款日（1～31 號）。<br>
-              • <b>均攤記憶與待入帳提醒</b>：範本僅記憶<b>已綁定 LINE</b> 的成員以確保跨帳本精準對應（未綁定代管成員可於帶入時再手動勾選）；系統會自動比對目前帳本，尚未入帳的項目會在帳務頁頂部提示。
-            </div>
-          </details>
-        </div>
-
-        <!-- 分類三 -->
-        <div class="faq-category-group">
-          <div class="faq-cat-title"><i class="fa-brands fa-line"></i> 三、LINE 聊天室快速記帳</div>
-
-          <details class="faq-item">
-            <summary class="faq-q">
-              <span>9. 怎麼在 LINE 聊天室直接打字快速記帳？</span>
-              <i class="fa-solid fa-chevron-down faq-chevron"></i>
-            </summary>
-            <div class="faq-a">
-              • <b>自由輸入</b>：在聊天室直接輸入 <span class="faq-code">項目 金額</span>（例如：<span class="faq-code">晚餐
-                600</span>）。（註：聊天室快記以一般支出為主，贊助／補助款請開啟網頁切換類型輸入。）<br>
-              • <b>定期支出帶入</b>：輸入 <span class="faq-code">定期</span>（或點擊快捷列「定期支出」）可查看個人定期清單與待入帳狀態，點擊固定金額項目即可直接產生草稿。<br>
-              • <b>草稿防呆</b>：系統會先回傳 <b>「草稿確認卡」</b> 讓你核對目標帳本與金額，按下 <b>「✅ 確認入帳」</b> 才會正式儲存。
-            </div>
-          </details>
-
-          <details class="faq-item">
-            <summary class="faq-q">
-              <span>10. 聊天室記帳如何指定帳本、墊付與均攤？編號去哪看？</span>
-              <i class="fa-solid fa-chevron-down faq-chevron"></i>
-            </summary>
-            <div class="faq-a">
-              完整格式為 <span class="faq-code">#帳本編號 項目 金額 @墊付編號 /均攤編號</span>（例如：<span class="faq-code">#2 晚餐 600 @3 /1 2</span>，符號皆可省略）：<br>
-              • <b>智慧預設</b>：省略 <span class="faq-code">#</span> 預設寫入目前預設帳本（寫在開頭或句尾皆可）；省略 <span class="faq-code">@</span> 預設由你墊付；省略 <span class="faq-code">/</span> 預設全員均攤。<br>
-              • <b>查詢編號</b>：點擊聊天室快捷列的 <b>「帳本與成員編號」</b>（或輸入 <span class="faq-code">編號</span>）即可一次查看所有進行中帳本與各帳本成員的對應編號；點擊 <b>「快速記帳說明」</b> 則可查看詳細指令與範例。<br>
-              • <b>多筆輸入</b>：支援<b>換行一次輸入多筆花費</b>（最多 15 筆），可於第一行單獨輸入 <span class="faq-code">#2</span> 指定整批寫入同一本帳本。
-            </div>
-          </details>
-
-          <details class="faq-item">
-            <summary class="faq-q">
-              <span>11. 電腦版 LINE 看不到下方圖文選單怎麼辦？</span>
-              <i class="fa-solid fa-chevron-down faq-chevron"></i>
-            </summary>
-            <div class="faq-a">
-              LINE 電腦版原生不支援顯示下方圖文選單，只要在聊天室輸入 <span class="faq-code">選單</span> 或 <span
-                class="faq-code">?</span>，機器人就會回傳功能按鈕卡片並在輸入框上方重新喚出快捷按鈕列。
-            </div>
-          </details>
-        </div>
-
-        <!-- 分類四 -->
-        <div class="faq-category-group">
-          <div class="faq-cat-title"><i class="fa-solid fa-calculator"></i> 四、結算、報表與管理者權限</div>
-
-          <details class="faq-item">
-            <summary class="faq-q">
-              <span>12. 「最小轉帳結清路徑」是怎麼計算的？</span>
-              <i class="fa-solid fa-chevron-down faq-chevron"></i>
-            </summary>
-            <div class="faq-a">
-              系統會統計每位成員「已預付」減去「應均攤」，再加上「贊助／補助款」後的最終淨額（正數為應收、負數為應付），再透過演算法自動配對付款人與收款人，以<b>最少的轉帳次數</b>讓全員帳目歸零結清。
-            </div>
-          </details>
-
-          <details class="faq-item">
-            <summary class="faq-q">
-              <span>13. 如何正式結算鎖定並保存帳務報表？</span>
-              <i class="fa-solid fa-chevron-down faq-chevron"></i>
-            </summary>
-            <div class="faq-a">
-              • <b>正式結算</b>：帳本管理者可在 <b>「結算總覽」</b> 點擊「正式結算並鎖定帳本」，鎖定後全員變為唯讀並自動收到 LINE 結算通知。<br>
-              • <b>保存與分享</b>：所有成員隨時都可在「結算總覽」點擊 <b>「複製文字」</b> 貼到 LINE 群組，或點 <b>「匯出 CSV」</b> 下載 Excel
-              檔案保存（含一般支出與贊助／補助款明細）。
-            </div>
-          </details>
-
-          <details class="faq-item">
-            <summary class="faq-q">
-              <span>14. 如何沿用固定成員、移交管理權限或刪除帳本？</span>
-              <i class="fa-solid fa-chevron-down faq-chevron"></i>
-            </summary>
-            <div class="faq-a">
-              • <b>沿用固定成員</b>：點擊頂部「建立」新帳本時，勾選 <b>「直接加入目前帳本的成員」</b>，即可一鍵帶入原成員（沿用暱稱）並自動推播通知大家。<br>
-              • <b>移交管理權限</b>：帳本管理者可至 <b>「結算總覽」</b> 指定另一位已綁定 LINE 的成員接替作為帳本管理者，移交後系統會推播通知接任者。<br>
-              • <b>刪除帳本</b>：僅帳本管理者可至 <b>「結算總覽」</b> 最下方點擊「刪除此記帳本」，完整輸入帳本名稱確認後即可永久清除所有資料。
-            </div>
-          </details>
+      <div class="modal-fixed-sub">
+        <div class="faq-search-wrap" style="margin-bottom:0;">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" id="faqSearchInput" class="faq-search-input" placeholder="搜尋關鍵字（例如：贊助、補助、定期、代管、編號、管理者）"
+            oninput="filterFaqItems()" />
         </div>
       </div>
 
-      <div class="modal-actions">
+      <div class="modal-body">
+        <div id="faqEmptyNotice" class="hidden"
+          style="text-align:center; padding:24px 0; color:var(--text-sub); font-size:13px;">
+          找不到符合的說明項目，請嘗試其他關鍵字。
+        </div>
+
+        <div id="faqListContainer">
+          <!-- 分類一 -->
+          <div class="faq-category-group">
+            <div class="faq-cat-title"><i class="fa-solid fa-compass"></i> 一、入門與帳號設定</div>
+
+            <details class="faq-item">
+              <summary class="faq-q">
+                <span>1. 如何建立新帳本或邀請朋友加入？</span>
+                <i class="fa-solid fa-chevron-down faq-chevron"></i>
+              </summary>
+              <div class="faq-a">
+                點擊頂部 <b>「建立」</b> 輸入帳本名稱即可開帳並成為該帳本的 <b>帳本管理者</b>。帳本進行中時，所有成員都可以在主卡片下方看到 <b>6 碼邀請碼</b>，點擊 <b>「邀請朋友」</b>
+                即可複製專屬連結或透過 LINE 好友選單傳送；朋友點擊連結或輸入邀請碼即可加入。
+              </div>
+            </details>
+
+            <details class="faq-item">
+              <summary class="faq-q">
+                <span>2. 受邀加入時跳出「認領代管成員」該怎麼選？</span>
+                <i class="fa-solid fa-chevron-down faq-chevron"></i>
+              </summary>
+              <div class="faq-a">
+                若帳本管理者先前已幫你建立「未綁定 LINE」的代管名單，受邀加入時系統會先詢問身分：<br>
+                • <b>名單中有你</b>：點擊對應名字並二次確認後，原本幫你代記的墊付與均攤紀錄會自動合併至你的 LINE 帳號（合併後無法還原）。<br>
+                • <b>名單中沒有你或不確定</b>：請直接點選 <b>「我是新成員，直接加入」</b>。
+              </div>
+            </details>
+
+            <details class="faq-item">
+              <summary class="faq-q">
+                <span>3. 為什麼建議加入記帳本官方帳號好友？</span>
+                <i class="fa-solid fa-chevron-down faq-chevron"></i>
+              </summary>
+              <div class="faq-a">
+                未加好友仍可正常開啟網頁記帳；但加入官方帳號好友後，才能在<b>正式結算</b>、<b>被加入新帳本</b>或<b>接任帳本管理者</b>時收到 LINE 推播通知，也能直接在 LINE
+                聊天室輸入文字快速記帳、帶入定期支出與查詢個人明細。
+              </div>
+            </details>
+          </div>
+
+          <!-- 分類二 -->
+          <div class="faq-category-group">
+            <div class="faq-cat-title"><i class="fa-solid fa-pen-to-square"></i> 二、日常記帳、贊助／補助款與定期支出</div>
+
+            <details class="faq-item">
+              <summary class="faq-q">
+                <span>4. 朋友沒用 LINE 或不想自己操作記帳怎麼辦？</span>
+                <i class="fa-solid fa-chevron-down faq-chevron"></i>
+              </summary>
+              <div class="faq-a">
+                帳本管理者可點擊主卡片下方的 <b>「代管成員」</b>，輸入暱稱（例如：阿公、不記帳的小美）建立 <span class="guest-badge"
+                  style="margin-left:0;">未綁定</span> 成員。代管成員一樣可作為墊付人、補助提供人或均攤／受惠對象參與結算，日後對方若加入帳本也能隨時認領合併。
+              </div>
+            </details>
+
+            <details class="faq-item">
+              <summary class="faq-q">
+                <span>5. 記錯金額或分攤名單可以修改嗎？</span>
+                <i class="fa-solid fa-chevron-down faq-chevron"></i>
+              </summary>
+              <div class="faq-a">
+                只要帳本狀態為 <b>「進行中」</b>，所有成員皆可至 <b>「帳務明細」</b> 分頁點擊項目右側的 <b>「編輯」</b>
+                修改類型、名稱、金額、墊付／提供人或分攤名單，也可刪除該筆項目。一旦帳本管理者執行「正式結算」後，帳本即鎖定為唯讀。
+              </div>
+            </details>
+
+            <details class="faq-item">
+              <summary class="faq-q">
+                <span>6. 如何修改成員在帳本內的顯示暱稱？</span>
+                <i class="fa-solid fa-chevron-down faq-chevron"></i>
+              </summary>
+              <div class="faq-a">
+                點擊主卡片上「我的暱稱」旁的 <b>「改名」</b>，即可設定專屬於目前帳本的顯示名稱；<b>帳本管理者</b>則可在 <b>「結算總覽」</b>
+                的成員統計表中，點擊任一位成員（包含代管成員）旁的鉛筆圖示協助修改暱稱。
+              </div>
+            </details>
+
+            <details class="faq-item">
+              <summary class="faq-q">
+                <span>7. 什麼時候使用「贊助／補助款」？金額怎麼計算？</span>
+                <i class="fa-solid fa-chevron-down faq-chevron"></i>
+              </summary>
+              <div class="faq-a">
+                適合「有人領取補助款或自掏腰包贊助大家花費」（如旅遊補助、長輩贊助金、刷卡回饋）的情境。點擊「新增帳務項目」後，將頂部類型切換為 <b>「🎁 贊助／補助款」</b> 即可輸入：<br>
+                • <b>情境 1（平分外部補助）</b>：A 領取 $3,000 旅遊補助，受惠成員勾選 <b>A、B、C</b> 三人 ➔ 每人各折抵 $1,000；A 負責拿出 $3,000 扣掉自己折抵的
+                $1,000，補助淨額為 <span class="faq-code">-$2,000</span>，B 與 C 各為 <span class="faq-code">+$1,000</span>。<br>
+                • <b>情境 2（個人純贊助他人）</b>：A 自掏腰包贊助 $3,000，受惠成員<b>取消勾選 A</b>、只勾 <b>B、C</b> ➔ A 補助淨額為 <span
+                  class="faq-code">-$3,000</span>，B 與 C 各折抵 <span class="faq-code">+$1,500</span>。<br>
+                • 帳本含贊助／補助款時，「結算總覽」會自動展開 <b>「贊助／補助」</b> 欄位，讓 <span class="faq-code">已預付 - 應均攤 + 贊助／補助 = 淨額</span> 清楚透明。
+              </div>
+            </details>
+
+            <details class="faq-item">
+              <summary class="faq-q">
+                <span>8. 如何使用「個人定期支出」提醒每月固定開銷？</span>
+                <i class="fa-solid fa-chevron-down faq-chevron"></i>
+              </summary>
+              <div class="faq-a">
+                定期支出範本綁定你的個人 LINE 帳號，<b>跨所有帳本皆可共用</b>（適合每月固定訂閱費、會員費）：<br>
+                • <b>建立與管理</b>：可從 <b>「我的明細 ➔ 定期支出設定」</b> 新增，或在新增一般支出時勾選 <b>「同時儲存為我的定期支出範本」</b>。金額可填 <span
+                  class="faq-code">0</span> 代表浮動帳單（如水電費），也可設定每月扣款日（1～31 號）。<br>
+                • <b>均攤記憶與待入帳提醒</b>：範本僅記憶<b>已綁定 LINE</b> 的成員以確保跨帳本精準對應（未綁定代管成員可於帶入時再手動勾選）；系統會自動比對目前帳本，尚未入帳的項目會在帳務頁頂部提示。
+              </div>
+            </details>
+          </div>
+
+          <!-- 分類三 -->
+          <div class="faq-category-group">
+            <div class="faq-cat-title"><i class="fa-brands fa-line"></i> 三、LINE 聊天室快速記帳</div>
+
+            <details class="faq-item">
+              <summary class="faq-q">
+                <span>9. 怎麼在 LINE 聊天室直接打字快速記帳？</span>
+                <i class="fa-solid fa-chevron-down faq-chevron"></i>
+              </summary>
+              <div class="faq-a">
+                • <b>自由輸入</b>：在聊天室直接輸入 <span class="faq-code">項目 金額</span>（例如：<span class="faq-code">晚餐
+                  600</span>）。（註：聊天室快記以一般支出為主，贊助／補助款請開啟網頁切換類型輸入。）<br>
+                • <b>定期支出帶入</b>：輸入 <span class="faq-code">定期</span>（或點擊快捷列「定期支出」）可查看個人定期清單與待入帳狀態，點擊固定金額項目即可直接產生草稿。<br>
+                • <b>草稿防呆</b>：系統會先回傳 <b>「草稿確認卡」</b> 讓你核對目標帳本與金額，按下 <b>「✅ 確認入帳」</b> 才會正式儲存。
+              </div>
+            </details>
+
+            <details class="faq-item">
+              <summary class="faq-q">
+                <span>10. 聊天室記帳如何指定帳本、墊付與均攤？編號去哪看？</span>
+                <i class="fa-solid fa-chevron-down faq-chevron"></i>
+              </summary>
+              <div class="faq-a">
+                完整格式為 <span class="faq-code">#帳本編號 項目 金額 @墊付編號 /均攤編號</span>（例如：<span class="faq-code">#2 晚餐 600 @3 /1 2</span>，符號皆可省略）：<br>
+                • <b>智慧預設</b>：省略 <span class="faq-code">#</span> 預設寫入目前預設帳本（寫在開頭或句尾皆可）；省略 <span class="faq-code">@</span> 預設由你墊付；省略 <span class="faq-code">/</span> 預設全員均攤。<br>
+                • <b>查詢編號</b>：點擊聊天室快捷列的 <b>「帳本與成員編號」</b>（或輸入 <span class="faq-code">編號</span>）即可一次查看所有進行中帳本與各帳本成員的對應編號；點擊 <b>「快速記帳說明」</b> 則可查看詳細指令與範例。<br>
+                • <b>多筆輸入</b>：支援<b>換行一次輸入多筆花費</b>（最多 15 筆），可於第一行單獨輸入 <span class="faq-code">#2</span> 指定整批寫入同一本帳本。
+              </div>
+            </details>
+
+            <details class="faq-item">
+              <summary class="faq-q">
+                <span>11. 電腦版 LINE 看不到下方圖文選單怎麼辦？</span>
+                <i class="fa-solid fa-chevron-down faq-chevron"></i>
+              </summary>
+              <div class="faq-a">
+                LINE 電腦版原生不支援顯示下方圖文選單，只要在聊天室輸入 <span class="faq-code">選單</span> 或 <span
+                  class="faq-code">?</span>，機器人就會回傳功能按鈕卡片並在輸入框上方重新喚出快捷按鈕列。
+              </div>
+            </details>
+          </div>
+
+          <!-- 分類四 -->
+          <div class="faq-category-group">
+            <div class="faq-cat-title"><i class="fa-solid fa-calculator"></i> 四、結算、報表與管理者權限</div>
+
+            <details class="faq-item">
+              <summary class="faq-q">
+                <span>12. 「最小轉帳結清路徑」是怎麼計算的？</span>
+                <i class="fa-solid fa-chevron-down faq-chevron"></i>
+              </summary>
+              <div class="faq-a">
+                系統會統計每位成員「已預付」減去「應均攤」，再加上「贊助／補助款」後的最終淨額（正數為應收、負數為應付），再透過演算法自動配對付款人與收款人，以<b>最少的轉帳次數</b>讓全員帳目歸零結清。
+              </div>
+            </details>
+
+            <details class="faq-item">
+              <summary class="faq-q">
+                <span>13. 如何正式結算鎖定並保存帳務報表？</span>
+                <i class="fa-solid fa-chevron-down faq-chevron"></i>
+              </summary>
+              <div class="faq-a">
+                • <b>正式結算</b>：帳本管理者可在 <b>「結算總覽」</b> 點擊「正式結算並鎖定帳本」，鎖定後全員變為唯讀，並可自由選擇是否同時 LINE 推播通知大家。<br>
+                • <b>保存與分享</b>：所有成員隨時都可在「結算總覽」點擊 <b>「複製文字」</b> 貼到 LINE 群組，或點 <b>「匯出 CSV」</b> 下載 Excel
+                檔案保存（若於 LINE 內建視窗操作，點擊「外部開啟匯出」即可切換至外部瀏覽器下載）。
+              </div>
+            </details>
+
+            <details class="faq-item">
+              <summary class="faq-q">
+                <span>14. 如何沿用固定成員、移交管理權限或刪除帳本？</span>
+                <i class="fa-solid fa-chevron-down faq-chevron"></i>
+              </summary>
+              <div class="faq-a">
+                • <b>沿用固定成員</b>：點擊頂部「建立」新帳本時，勾選 <b>「直接加入目前帳本的成員」</b>，即可一鍵帶入原成員（沿用暱稱）並自動推播通知大家。<br>
+                • <b>移交管理權限</b>：帳本管理者可至 <b>「結算總覽」</b> 指定另一位已綁定 LINE 的成員接替作為帳本管理者，移交後系統會推播通知接任者。<br>
+                • <b>刪除帳本</b>：僅帳本管理者可至 <b>「結算總覽」</b> 最下方點擊「刪除此記帳本」，完整輸入帳本名稱確認後即可永久清除所有資料。
+              </div>
+            </details>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
         <button type="button" class="btn-primary" onclick="closeModal('faqModal')">我知道了</button>
       </div>
     </div>
   </div>
 
-  <!-- 15. 個人定期支出管理 Modal -->
+  <!-- 15. 個人定期支出管理 Modal（固定底部操作列） -->
   <div id="recurringManageModal" class="modal-backdrop">
-    <div class="modal-sheet">
+    <div class="modal-sheet sheet-fixed">
       <div class="modal-header">
         <h3><i class="fa-solid fa-repeat" style="color:var(--primary);"></i> 我的定期支出項目</h3>
         <button class="close-btn" onclick="closeModal('recurringManageModal')"><i
             class="fa-solid fa-xmark"></i></button>
       </div>
-      <p style="font-size:12.5px; color:var(--text-sub); margin-top:0; line-height:1.5;">
-        設定個人固定開銷（如影音訂閱、會員費），跨所有帳本皆可快速帶入，並自動比對目前帳本是否已入帳。
-      </p>
 
-      <div id="recurringTemplateList" style="margin-bottom:14px;"></div>
+      <div class="modal-body">
+        <p style="font-size:12.5px; color:var(--text-sub); margin-top:0; line-height:1.5;">
+          設定個人固定開銷（如影音訂閱、會員費），跨所有帳本皆可快速帶入，並自動比對目前帳本是否已入帳。
+        </p>
+        <div id="recurringTemplateList"></div>
+      </div>
 
-      <div class="modal-actions">
-        <button type="button" class="btn-primary" onclick="openRecurringEditModal()">
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" onclick="closeModal('recurringManageModal')">關閉</button>
+        <button type="button" class="btn-primary" style="flex:1;" onclick="openRecurringEditModal()">
           <i class="fa-solid fa-plus"></i> 新增定期支出範本
         </button>
       </div>
     </div>
   </div>
 
-  <!-- 16. 新增 / 編輯定期支出範本 Modal -->
+  <!-- 16. 新增 / 編輯定期支出範本 Modal（固定底部操作列） -->
   <div id="recurringEditModal" class="modal-backdrop">
-    <div class="modal-sheet">
+    <div class="modal-sheet sheet-fixed">
       <div class="modal-header">
         <h3 id="recurringEditTitle">新增定期支出範本</h3>
         <button class="close-btn" onclick="backToRecurringManage()"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <input type="hidden" id="editRecurringId" />
 
-      <div class="form-group">
-        <label class="form-label">項目名稱</label>
-        <input type="text" id="tplItemName" class="form-control" placeholder="例如：Netflix、YouTube Premium、Costco會費"
-          maxlength="40" />
-      </div>
-
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+      <div class="modal-body">
         <div class="form-group">
-          <label class="form-label">預設金額（可填 0）</label>
-          <input type="number" id="tplAmount" class="form-control" inputmode="decimal" placeholder="填 0 代表浮動金額" min="0"
-            step="any" />
+          <label class="form-label">項目名稱</label>
+          <input type="text" id="tplItemName" class="form-control" placeholder="例如：Netflix、YouTube Premium、Costco會費"
+            maxlength="40" />
         </div>
-        <div class="form-group">
-          <label class="form-label">每月扣款日（選填）</label>
-          <input type="number" id="tplBillingDay" class="form-control" inputmode="numeric" placeholder="1～31 號" min="1"
-            max="31" />
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          <div class="form-group">
+            <label class="form-label">預設金額（可填 0）</label>
+            <input type="number" id="tplAmount" class="form-control" inputmode="decimal" placeholder="填 0 代表浮動金額" min="0"
+              step="any" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">每月扣款日（選填）</label>
+            <input type="number" id="tplBillingDay" class="form-control" inputmode="numeric" placeholder="1～31 號" min="1"
+              max="31" />
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:0;">
+          <div class="form-label">
+            <span>預設均攤成員（跨帳本自動對應）</span>
+            <button type="button" class="icon-btn" style="padding:3px 8px; font-size:12px;"
+              onclick="toggleSelectAllTplSplit()">
+              全選 / 取消
+            </button>
+          </div>
+          <div id="tplSplitMembersGrid" class="split-grid"></div>
+          <div style="font-size:11.5px; color:var(--text-sub); margin-top:6px; line-height:1.45;">
+            僅顯示已綁定 LINE 的成員（跨帳本開新帳時才能精準自動對應；未綁定代管成員可於實際帶入記帳時再手動勾選）。
+          </div>
         </div>
       </div>
 
-      <div class="form-group">
-        <div class="form-label">
-          <span>預設均攤成員（跨帳本自動對應）</span>
-          <button type="button" class="icon-btn" style="padding:3px 8px; font-size:12px;"
-            onclick="toggleSelectAllTplSplit()">
-            全選 / 取消
-          </button>
-        </div>
-        <div id="tplSplitMembersGrid" class="split-grid"></div>
-        <div style="font-size:11.5px; color:var(--text-sub); margin-top:6px; line-height:1.45;">
-          僅顯示已綁定 LINE 的成員（跨帳本開新帳時才能精準自動對應；未綁定代管成員可於實際帶入記帳時再手動勾選）。
-        </div>
-      </div>
-
-      <div class="modal-actions">
+      <div class="modal-footer">
         <button type="button" class="btn-secondary" style="flex:1;" onclick="backToRecurringManage()">返回</button>
         <button type="button" class="btn-primary" style="flex:1;" onclick="submitRecurringTemplateForm()">
           <i class="fa-solid fa-check"></i> 儲存範本
@@ -1032,44 +1082,48 @@
     </div>
   </div>
 
-  <!-- 18. 帳務操作歷程 Modal -->
+  <!-- 18. 帳務操作歷程 Modal（固定篩選列與底部關閉列） -->
   <div id="activityLogModal" class="modal-backdrop">
-    <div class="modal-sheet">
+    <div class="modal-sheet sheet-fixed">
       <div class="modal-header">
         <h3><i class="fa-solid fa-clock-rotate-left" style="color:var(--primary);"></i> 帳務操作歷程</h3>
         <button class="close-btn" onclick="closeModal('activityLogModal')"><i class="fa-solid fa-xmark"></i></button>
       </div>
 
-      <div class="log-filter-bar">
-        <button type="button" id="logFilterAll" class="log-filter-btn active" onclick="switchActivityLogFilter('ALL')">
-          全部歷程
-        </button>
-        <button type="button" id="logFilterModify" class="log-filter-btn"
-          onclick="switchActivityLogFilter('MODIFY_ONLY')">
-          僅看修改／刪除
+      <div class="modal-fixed-sub">
+        <div class="log-filter-bar" style="margin-bottom:8px;">
+          <button type="button" id="logFilterAll" class="log-filter-btn active" onclick="switchActivityLogFilter('ALL')">
+            全部歷程
+          </button>
+          <button type="button" id="logFilterModify" class="log-filter-btn"
+            onclick="switchActivityLogFilter('MODIFY_ONLY')">
+            僅看修改／刪除
+          </button>
+        </div>
+        <div id="activityLogCountHint" style="font-size:12px; color:var(--text-sub);"></div>
+      </div>
+
+      <div class="modal-body">
+        <div id="activityLogList"></div>
+
+        <div id="activityLogLoading" class="hidden"
+          style="text-align:center; padding:16px 0; color:var(--text-sub); font-size:13px;">
+          <i class="fa-solid fa-spinner fa-spin"></i> 正在載入歷程紀錄...
+        </div>
+
+        <button id="btnLoadMoreLogs" type="button" class="btn-secondary hidden" style="width:100%; margin-top:4px;"
+          onclick="loadMoreActivityLogs()">
+          <i class="fa-solid fa-angles-down"></i> 載入更早紀錄
         </button>
       </div>
 
-      <div id="activityLogCountHint" style="font-size:12px; color:var(--text-sub); margin-bottom:10px;"></div>
-      <div id="activityLogList"></div>
-
-      <div id="activityLogLoading" class="hidden"
-        style="text-align:center; padding:16px 0; color:var(--text-sub); font-size:13px;">
-        <i class="fa-solid fa-spinner fa-spin"></i> 正在載入歷程紀錄...
-      </div>
-
-      <button id="btnLoadMoreLogs" type="button" class="btn-secondary hidden" style="width:100%; margin-top:4px;"
-        onclick="loadMoreActivityLogs()">
-        <i class="fa-solid fa-angles-down"></i> 載入更早紀錄
-      </button>
-
-      <div class="modal-actions">
+      <div class="modal-footer">
         <button type="button" class="btn-primary" onclick="closeModal('activityLogModal')">關閉</button>
       </div>
     </div>
   </div>
 
-  <script src="./app.js"></script>
+  <script src="./app.js?v=20261124"></script>
 </body>
 
 </html>
