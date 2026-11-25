@@ -5,9 +5,6 @@ const LIFF_ID = "2012687270-krKUpomw";
 const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyK9l3YGWPuKE9uGLM2TlxwQy0C1nQxQCii79esd2uYFvyt5imgzenyLKWiBaws_HAw/exec";
 const OA_ADD_FRIEND_URL = "https://line.me/R/ti/p/@184ibjmd";
 
-const ENABLE_MOCK_MODE = false;
-let isMockMode = false;
-
 let currentUser = null;
 let appState = null;
 let currentTab = 'expenses';
@@ -40,11 +37,11 @@ let ignoreNextPopState = false;
 let modalHistorySyncTimer = null;
 
 function isRunningInLineClient() {
-    return !isMockMode && typeof liff !== 'undefined' && liff.isInClient && liff.isInClient();
+    return typeof liff !== 'undefined' && liff.isInClient && liff.isInClient();
 }
 
 function getLiffIdTokenSafe() {
-    if (isMockMode || typeof liff === 'undefined' || !liff.getIDToken) return '';
+    if (typeof liff === 'undefined' || !liff.getIDToken) return '';
     try {
         return liff.getIDToken() || '';
     } catch (e) {
@@ -53,7 +50,7 @@ function getLiffIdTokenSafe() {
 }
 
 function getLiffAccessTokenSafe() {
-    if (isMockMode || typeof liff === 'undefined' || !liff.getAccessToken) return '';
+    if (typeof liff === 'undefined' || !liff.getAccessToken) return '';
     try {
         return liff.getAccessToken() || '';
     } catch (e) {
@@ -68,7 +65,7 @@ function clearReloginGuard() {
 }
 
 function forceExternalRelogin() {
-    if (isMockMode || typeof liff === 'undefined') return false;
+    if (typeof liff === 'undefined') return false;
     try {
         const lastRetry = Number(localStorage.getItem(RELOGIN_GUARD_KEY) || 0);
         // 2 分鐘內最多只自動重登 1 次，徹底杜絕無限循環登出
@@ -178,44 +175,9 @@ function extractPrefillFromUrl() {
 // =========================================================================
 (async function initLiffApp() {
     try {
-        const urlParams = new URLSearchParams(window.location.search);
-        const mockUserId = urlParams.get('mock_user');
-        const mockUserName = urlParams.get('mock_name') || '測試成員';
         const incomingInvite = extractInviteCodeFromUrl();
         const incomingPrefill = extractPrefillFromUrl();
 
-        // 【分支 A：模擬測試模式（正式上線時已透過 ENABLE_MOCK_MODE = false 停用）】
-        if (ENABLE_MOCK_MODE && mockUserId) {
-            isMockMode = true;
-            currentUser = {
-                userId: mockUserId,
-                displayName: mockUserName
-            };
-            if (incomingPrefill) {
-                pendingPrefillDraft = incomingPrefill;
-            }
-
-            const banner = document.createElement('div');
-            banner.style.cssText = 'background:#3d2c27; color:#fcecef; font-size:12px; text-align:center; padding:6px; font-weight:700;';
-            banner.textContent = '🧪 模擬測試模式｜目前角色：' + mockUserName + ' (' + mockUserId + ')';
-            document.body.insertBefore(banner, document.body.firstChild);
-
-            if ((incomingInvite || incomingPrefill) && window.history && window.history.replaceState) {
-                ['invite', 'prefill_ledger', 'prefill_item', 'prefill_amt', 'prefill_payer', 'prefill_splits'].forEach(k => urlParams.delete(k));
-                const remainQuery = urlParams.toString();
-                const cleanMockUrl = window.location.pathname + (remainQuery ? '?' + remainQuery : '');
-                window.history.replaceState({}, document.title, cleanMockUrl);
-            }
-
-            document.getElementById('topControlBar').classList.remove('hidden');
-            await callGasApi('bootstrap', {
-                userProfile: currentUser,
-                inviteCode: incomingInvite
-            }, '正在載入模擬帳號資料...');
-            return;
-        }
-
-        // 【分支 B：正式 LINE LIFF 模式】
         if (incomingInvite) {
             localStorage.setItem('pending_invite_code', incomingInvite);
         }
@@ -302,7 +264,7 @@ function extractPrefillFromUrl() {
 })();
 
 async function checkOfficialAccountFriendship() {
-    if (isMockMode || typeof liff === 'undefined' || !liff.isLoggedIn || !liff.isLoggedIn()) return;
+    if (typeof liff === 'undefined' || !liff.isLoggedIn || !liff.isLoggedIn()) return;
     try {
         const friendship = await liff.getFriendship();
         const bannerEl = document.getElementById('addFriendBanner');
@@ -384,7 +346,7 @@ async function callGasApi(action, payloadObj, loadingMsg, options) {
 
         const json = await response.json();
         if (!json.ok) {
-            if (json.error === 'AUTH_EXPIRED' && !isMockMode && typeof liff !== 'undefined') {
+            if (json.error === 'AUTH_EXPIRED' && typeof liff !== 'undefined') {
                 if (!isSilent) hideLoading();
                 showToast('LINE 登入憑證已過期，正在重新驗證...', 3000);
                 setTimeout(function () {
@@ -2096,7 +2058,7 @@ async function fetchActivityLogsPage(isAppend) {
         if (!response.ok) throw new Error('伺服器連線異常 (HTTP ' + response.status + ')');
         const json = await response.json();
         if (!json.ok) {
-            if (json.error === 'AUTH_EXPIRED' && !isMockMode && typeof liff !== 'undefined') {
+            if (json.error === 'AUTH_EXPIRED' && typeof liff !== 'undefined') {
                 showToast('LINE 登入憑證已過期，正在重新驗證...', 3000);
                 setTimeout(function () {
                     if (!forceExternalRelogin()) {
@@ -2188,17 +2150,10 @@ function renderActivityLogList() {
 function openShareModal() {
     const ledger = appState.activeLedgerData.ledger;
     document.getElementById('modalInviteCodeBadge').textContent = ledger.invite_code;
-
-    if (isMockMode) {
-        const baseUrl = window.location.origin + window.location.pathname;
-        document.getElementById('shareUrlInput').value =
-            baseUrl + '?mock_user=TEST_U02&mock_name=旅伴小華&invite=' + ledger.invite_code;
-    } else {
-        document.getElementById('shareUrlInput').value = ledger.invite_url;
-    }
+    document.getElementById('shareUrlInput').value = ledger.invite_url;
 
     const lineShareBtn = document.getElementById('btnLineShare');
-    if (!isMockMode && liff.isApiAvailable && liff.isApiAvailable('shareTargetPicker')) {
+    if (typeof liff !== 'undefined' && liff.isApiAvailable && liff.isApiAvailable('shareTargetPicker')) {
         lineShareBtn.classList.remove('hidden');
     } else {
         lineShareBtn.classList.add('hidden');
